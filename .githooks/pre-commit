@@ -1,9 +1,18 @@
 #!/bin/bash
-# Prevent accidental commits to upstream/ (read-only submodules)
+# Prevent accidental content changes inside upstream/ submodules.
+# Submodule pointer updates (e.g., after `git submodule update --remote`)
+# are allowed — those are just commit hash references, not file edits.
 
-if git diff --cached --name-only | grep -q '^upstream/'; then
+# Get staged files that are inside upstream/ but deeper than the submodule root
+# (submodule pointer changes show as "upstream/cowork", not "upstream/cowork/...")
+BLOCKED=$(git diff --cached --name-only | grep '^upstream/.*/' || true)
+
+if [ -n "$BLOCKED" ]; then
   echo ""
-  echo "ERROR: Cannot commit changes under upstream/ (read-only submodules)"
+  echo "ERROR: Cannot commit file changes inside upstream/ (read-only submodules)"
+  echo ""
+  echo "Blocked files:"
+  echo "$BLOCKED" | sed 's/^/  /'
   echo ""
   echo "The upstream/ directory contains reference submodules that must not be modified."
   echo "To work with a skill from upstream, use: /source-skill <skill-name>"
