@@ -76,10 +76,60 @@ Package selected skills into a deployable plugin in `plugins/`.
 3. **Use `/source-skill` to copy from upstream** — it handles path transforms
 4. **Commit with `/conventional-commit`** — follows org commit standards
 
-## Updating Upstream References
+## Syncing Upstream Skills
+
+When the stromy team updates skills in Cowork, there are two ways you get those changes:
+
+### Automatic (GitHub Action)
+
+A GitHub Action monitors Cowork for skill changes. When skills are updated on `main`, you'll receive a **pull request** in this repo titled `chore(upstream): 🔄 Cowork skills updated`. The PR includes:
+
+- The new Cowork commit hash
+- A changelog of recent skill changes
+- Which skill directories were modified
+
+Review the PR, merge it, then re-source any skills you've already copied:
+
+```
+/source-skill <skill-name>
+```
+
+The source-skill workflow will detect the existing copy, show you what changed (via the `SOURCE.md` commit hash), and offer to update with fresh portability transforms.
+
+### Manual
+
+Pull the latest from upstream at any time:
 
 ```bash
-git submodule update --remote   # Pull latest from Cowork and duke-strategies-plugin
+git submodule update --remote upstream/cowork
+```
+
+Then check what changed:
+
+```bash
+# See which skills were updated
+cd upstream/cowork
+git log --oneline -10 -- .claude/skills/
+cd ../..
+```
+
+If you've sourced skills that were updated, re-source them:
+
+```
+/source-skill pdf
+```
+
+Commit the submodule pointer update:
+
+```bash
+git add upstream/cowork
+git commit -m "chore(upstream): 🔄 Update Cowork submodule"
+```
+
+### Checking available skills
+
+```bash
+ls upstream/cowork/.claude/skills/
 ```
 
 ## Contributing Back

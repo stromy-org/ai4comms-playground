@@ -1,0 +1,59 @@
+name: Sync Upstream Skills
+
+on:
+  repository_dispatch:
+    types: [cowork-skills-updated]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Update Cowork submodule
+        run: |
+          git submodule update --remote upstream/cowork
+          echo "COWORK_NEW=$(git -C upstream/cowork rev-parse HEAD)" >> $GITHUB_ENV
+          echo "COWORK_OLD=$(git diff --cached upstream/cowork | grep -oP '(?<=^-Subproject commit ).*' || echo 'unknown')" >> $GITHUB_ENV
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet upstream/cowork; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build changelog
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          cd upstream/cowork
+          echo "## Cowork Skills Updated" > /tmp/changelog.md
+          echo "" >> /tmp/changelog.md
+          echo "Submodule updated to \`$(git rev-parse --short HEAD)\`" >> /tmp/changelog.md
+          echo "" >> /tmp/changelog.md
+          echo "### Recent skill changes" >> /tmp/changelog.md
+          git log --oneline --no-merges -20 -- .claude/skills/ | sed 's/^/- /' >> /tmp/changelog.md
+          echo "" >> /tmp/changelog.md
+          echo "### Changed skill directories" >> /tmp/changelog.md
+          git diff --name-only HEAD~10..HEAD -- .claude/skills/ 2>/dev/null | sort -u | sed 's/^/- /' >> /tmp/changelog.md || echo "- (unable to diff)" >> /tmp/changelog.md
+
+      - name: Create PR
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(upstream): 🔄 Update Cowork submodule"
+          title: "chore(upstream): 🔄 Cowork skills updated"
+          body-path: /tmp/changelog.md
+          branch: chore/sync-cowork-upstream
+          delete-branch: true
+          labels: upstream-sync
