@@ -1,0 +1,15 @@
+# Codex project configuration for ai4comms-playground
+# AGENTS.md is auto-loaded as primary instructions.
+
+# ── Instructions ───────────────────────────────────────────
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+# ── Approval & Sandbox ────────────────────────────────────
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+# ── Reasoning ──────────────────────────────────────────────
+model_reasoning_effort = "high"
+
+# ── Web Search ─────────────────────────────────────────────
+web_search = "cached"

@@ -1,0 +1,15 @@
+{
+  "bootstrap_commit": "manual",
+  "bootstrap_date": "2026-03-25",
+  "skills_version": "1.0.0",
+  "repo_profile": "playground",
+  "skills_generated": [
+    "conventional-commit",
+    "skill-creator",
+    "quality-check",
+    "instruction-audit",
+    "source-skill",
+    "skill-reviewer",
+    "plugin-builder"
+  ]
+}

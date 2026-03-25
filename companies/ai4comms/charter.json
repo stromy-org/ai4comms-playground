@@ -1,0 +1,23 @@
+{
+  "brand_name": "ai4comms",
+  "colors": {
+    "primary": "#000000",
+    "secondary": "#666666",
+    "accent": "#0066CC",
+    "background": "#FFFFFF",
+    "text": "#333333"
+  },
+  "fonts": {
+    "heading": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "logo": {
+    "primary": null,
+    "icon": null
+  },
+  "spacing": {
+    "base": 8
+  },
+  "_note": "Placeholder — replace with actual ai4comms brand values"
+}

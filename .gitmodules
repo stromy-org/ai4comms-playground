@@ -1,0 +1,6 @@
+[submodule "upstream/cowork"]
+	path = upstream/cowork
+	url = https://github.com/stromy-org/Cowork.git
+[submodule "upstream/duke-strategies-plugin"]
+	path = upstream/duke-strategies-plugin
+	url = https://github.com/stromy-org/duke-strategies-plugin.git

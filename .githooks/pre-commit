@@ -1,0 +1,12 @@
+#!/bin/bash
+# Prevent accidental commits to upstream/ (read-only submodules)
+
+if git diff --cached --name-only | grep -q '^upstream/'; then
+  echo ""
+  echo "ERROR: Cannot commit changes under upstream/ (read-only submodules)"
+  echo ""
+  echo "The upstream/ directory contains reference submodules that must not be modified."
+  echo "To work with a skill from upstream, use: /source-skill <skill-name>"
+  echo ""
+  exit 1
+fi

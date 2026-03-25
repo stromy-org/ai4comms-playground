@@ -1,0 +1,12 @@
+{
+  "name": "ai4comms-playground",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skill development playground for ai4comms",
+  "dependencies": {
+    "docx": "^9.5.3",
+    "playwright": "^1.58.1",
+    "pptxgenjs": "^4.0.1",
+    "sharp": "^0.34.5"
+  }
+}
