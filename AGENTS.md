@@ -12,7 +12,8 @@ ai4comms-playground is a skill development sandbox for ai4comms. It provides rea
 ai4comms-playground/
 ├── .claude/skills/          # All skills (discoverable by agents)
 ├── rules/                   # Always-on rules (under .claude/)
-├── upstream/                # READ-ONLY submodules (Cowork, duke-strategies-plugin)
+├── upstream/                # READ-ONLY submodules (Cowork, duke-strategies-plugin, global-skills)
+├── scripts/                 # Setup script
 ├── plugins/                 # Plugin builds
 ├── companies/               # Company data
 ├── src/                     # Shared utilities (workspace.js/py, image-utils)
@@ -75,16 +76,16 @@ On main/master: auto-create feature branch → commit(s) → checkout main → m
 
 ## Available Skills
 
-### Infrastructure
+### Global (from upstream/global-skills/, symlinked to ~/.claude/skills/ via scripts/setup.sh)
 - **conventional-commit** — Commit workflow
 - **skill-creator** — Create/improve skills with evals
+
+### Infrastructure (local)
 - **quality-check** — Structural validation
-- **instruction-audit** — Instruction system maintenance
 
 ### Playground
 - **source-skill** — Copy and adapt skills from upstream
 - **skill-reviewer** — Review quality with source traceability
-- **plugin-builder** — Package skills into plugins
 
 ## Company Data
 
@@ -100,6 +101,7 @@ Always check charter.json before selecting colors/fonts.
 ## Commands
 
 ```bash
+bash scripts/setup.sh                     # First-time setup (submodules, global skills, hooks, deps)
 git submodule update --init --recursive   # Init submodules
 git submodule update --remote             # Pull latest
 npm install                               # Node deps

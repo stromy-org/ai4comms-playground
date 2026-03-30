@@ -1,15 +1,26 @@
 {
   "bootstrap_commit": "manual",
-  "bootstrap_date": "2026-03-25",
-  "skills_version": "1.0.0",
+  "bootstrap_date": "2026-03-29",
+  "skills_version": "2.2",
   "repo_profile": "playground",
   "skills_generated": [
-    "conventional-commit",
-    "skill-creator",
     "quality-check",
-    "instruction-audit",
     "source-skill",
-    "skill-reviewer",
-    "plugin-builder"
+    "skill-reviewer"
+  ],
+  "skill_checksums": {},
+  "custom_adaptations": {},
+  "copied_files": [],
+  "adapted_files": [],
+  "files_generated": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".codex/config.toml",
+    ".claude/bootstrap-version.json",
+    ".githooks/pre-commit",
+    ".github/workflows/sync-upstream.yml",
+    ".gitignore",
+    "package.json",
+    "pyproject.toml"
   ]
 }

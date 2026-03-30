@@ -4,3 +4,6 @@
 [submodule "upstream/duke-strategies-plugin"]
 	path = upstream/duke-strategies-plugin
 	url = https://github.com/stromy-org/duke-strategies-plugin.git
+[submodule "upstream/global-skills"]
+	path = upstream/global-skills
+	url = https://github.com/stromy-org/global-skills.git
