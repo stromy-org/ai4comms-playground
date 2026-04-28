@@ -1,0 +1,132 @@
+STROMY SOURCE-AVAILABLE LICENSE
+
+Version 1.0, April 2026
+
+Copyright (c) 2024-2026 Stromy BVBA (Belgium, BCE 1019.711.158).
+All rights reserved.
+
+TERMS AND CONDITIONS
+
+1. DEFINITIONS
+
+   "Licensed Material" means the source code, skills, scripts, templates,
+   and associated documentation files in this repository that originate
+   from Stromy BVBA's repositories (including skills synced from Cowork),
+   excluding any Third-Party Materials and Collaborator Original Works.
+
+   "Third-Party Materials" means files explicitly marked with a separate
+   license (e.g., files containing an Anthropic copyright notice or other
+   third-party LICENSE.txt).
+
+   "Collaborator Original Works" means new skills, scripts, or content
+   created independently by the Collaborator that do not derive from or
+   incorporate the Licensed Material.
+
+   "Licensor" means Stromy BVBA, the copyright holder.
+
+   "Collaborator" means any individual or entity granted access to this
+   repository by the Licensor for the purpose of collaborative skill
+   development.
+
+   "Derivative Work" means any modification, adaptation, translation, or
+   enhancement of the Licensed Material, including but not limited to
+   modifications to synced skills.
+
+   "Synced Skills" means skills automatically pushed from the Licensor's
+   Cowork repository into this repository's .claude/skills/ directory.
+
+2. GRANT OF RIGHTS
+
+   Subject to these terms, the Licensor grants each Collaborator a
+   limited, non-exclusive, non-transferable, revocable right to:
+
+   (a) Access, view, and study the Licensed Material;
+   (b) Use the Licensed Material to produce deliverables in the course of
+       work authorised by the Licensor;
+   (c) Modify Synced Skills within this repository for the purpose of the
+       collaboration;
+   (d) Create new, independent skills and content within this repository.
+
+3. RESTRICTIONS
+
+   Collaborators may NOT:
+
+   (a) Redistribute, publish, or make the Licensed Material available to
+       any third party, in whole or in part, in any form;
+   (b) Use the Licensed Material to build or offer a competing product or
+       service;
+   (c) Sublicense, sell, lease, or otherwise transfer rights in the
+       Licensed Material;
+   (d) Remove, alter, or obscure any copyright notice, license file, or
+       attribution in the Licensed Material;
+   (e) Extract Synced Skills from this repository for use in other
+       projects without prior written consent from the Licensor;
+   (f) Use the Licensed Material outside the scope of the authorised
+       collaboration without prior written consent from the Licensor.
+
+4. INTELLECTUAL PROPERTY
+
+   (a) The Licensed Material, including all Synced Skills, is and remains
+       the exclusive intellectual property of the Licensor.
+   (b) Derivative Works of the Licensed Material (including modifications
+       to Synced Skills) are owned by the Licensor. By contributing
+       modifications to Synced Skills, the Collaborator assigns all
+       intellectual property rights in those modifications to the Licensor.
+   (c) Collaborator Original Works (new skills, scripts, or content that
+       do not derive from or incorporate the Licensed Material) remain the
+       intellectual property of the Collaborator.
+   (d) In case of dispute over whether a work is a Derivative Work or a
+       Collaborator Original Work, the burden of proof lies with the party
+       claiming independent creation. The primary indicator is whether the
+       work shares substantial structure, logic, or content with any
+       existing Licensed Material.
+
+5. THIRD-PARTY MATERIALS
+
+   Certain files in this repository may be subject to separate license
+   terms (e.g., Anthropic's proprietary license). Such files are identified
+   by their own LICENSE.txt or copyright headers. Those separate terms
+   govern the use of those specific files and take precedence over this
+   license for those files only.
+
+6. NO WARRANTY
+
+   THE LICENSED MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+7. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+   ARISING FROM, OUT OF, OR IN CONNECTION WITH THE LICENSED MATERIAL OR
+   THE USE OR OTHER DEALINGS IN THE LICENSED MATERIAL.
+
+8. TERMINATION
+
+   (a) This license is effective until terminated.
+   (b) The Licensor may terminate this license at any time by revoking the
+       Collaborator's access to the repository.
+   (c) Upon termination, the Collaborator must destroy all copies of the
+       Licensed Material in their possession. Collaborator Original Works
+       may be retained by the Collaborator.
+
+9. GOVERNING LAW
+
+   This license is governed by and construed in accordance with the laws of
+   Belgium. The courts of Brussels, Belgium shall have exclusive
+   jurisdiction over any disputes arising from this license.
+
+   This license is compatible with the European Union's Software Directive
+   (2009/24/EC) and the Copyright in the Digital Single Market Directive
+   (2019/790/EU) as transposed into Belgian and Dutch national law.
+
+10. ACCEPTANCE
+
+    By accessing, cloning, forking, or using the contents of this
+    repository, you acknowledge that you have read, understood, and agree
+    to be bound by the terms and conditions of this license.
+
+---
+
+For licensing enquiries: william@stromy.eu

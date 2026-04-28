@@ -1,0 +1,5 @@
+# License files require owner approval to modify or delete
+LICENSE @WilliamMasquelier
+CONTRIBUTING.md @WilliamMasquelier
+.claude/skills/*/LICENSE.txt @WilliamMasquelier
+.github/CODEOWNERS @WilliamMasquelier

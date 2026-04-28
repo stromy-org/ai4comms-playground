@@ -4,7 +4,7 @@ Self-contained instructions for Codex CLI and other agents working in ai4comms-p
 
 ## Project Overview
 
-ai4comms-playground is a skill development sandbox for ai4comms. It provides read-only access to upstream skill libraries (Cowork, duke-strategies-plugin) and a structured workspace to build, test, and package skills and plugins.
+ai4comms-playground is a skill development sandbox for ai4comms. It provides a structured workspace to build, test, and package skills and plugins. Shared skills are automatically synced from Cowork via GitHub Actions.
 
 ## Repository Structure
 
@@ -12,7 +12,7 @@ ai4comms-playground is a skill development sandbox for ai4comms. It provides rea
 ai4comms-playground/
 ├── .claude/skills/          # All skills (discoverable by agents)
 ├── rules/                   # Always-on rules (under .claude/)
-├── upstream/                # READ-ONLY submodules (Cowork, duke-strategies-plugin, global-skills)
+├── upstream/                # READ-ONLY submodules (duke-strategies-plugin, global-skills)
 ├── scripts/                 # Setup script
 ├── plugins/                 # Plugin builds
 ├── companies/               # Company data
@@ -25,7 +25,13 @@ ai4comms-playground/
 
 ### Upstream is Read-Only
 
-The `upstream/` directory contains git submodules. NEVER edit, create, or delete files there. To use a skill from upstream, copy it manually into `.claude/skills/`.
+The `upstream/` directory contains git submodules. NEVER edit, create, or delete files there.
+
+### Shared Skills (Read-Only)
+
+14 skills are synced automatically from Cowork: docx, messaging-framework, notebooklm, organic-social-campaign, paid-social-campaign, pdf, pptx, pptx-hd, press-release, proposal, quality-check, remotion-video, skill-reviewer, xlsx.
+
+**Do not modify synced skills directly** — the sync pipeline will overwrite changes. To customize a synced skill, duplicate it with a `-custom` suffix (e.g., copy `pptx-hd/` → `pptx-hd-custom/`) and modify the copy only. This applies on all branches, not just main.
 
 ### Where Work Happens
 
@@ -62,9 +68,19 @@ All commits use Conventional Commits 1.0.0 with gitmoji.
 
 Priority: feat > fix > perf > refactor > build/ci/chore > docs/test/style
 
+### Branch Workflow
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Stable, reviewed code + sync pipeline target (PR only) |
+| `dev/emma` | Working branch — commit freely, experiment |
+| `feat/<name>` | Clean single-feature branches for PRs (via cherry-pick-pr skill) |
+
+Work on `dev/emma`. Periodically merge `main` to stay current. When a feature is ready, use the cherry-pick-pr skill to extract a clean PR from `dev/emma` into a `feat/<name>` branch.
+
 ### Main Branch Protection
 
-On main/master: auto-create feature branch → commit(s) → checkout main → merge --no-ff → delete branch.
+On main: PRs required with CODEOWNERS review. No direct pushes.
 
 ## Skill Architecture
 
@@ -83,9 +99,8 @@ On main/master: auto-create feature branch → commit(s) → checkout main → m
 ### Infrastructure (local)
 - **quality-check** — Structural validation
 
-### Playground
-- **source-skill** — Copy and adapt skills from upstream
-- **skill-reviewer** — Review quality with source traceability
+### Shared (synced from Cowork)
+docx, messaging-framework, notebooklm, organic-social-campaign, paid-social-campaign, pdf, pptx, pptx-hd, press-release, proposal, quality-check, remotion-video, skill-reviewer, xlsx
 
 ## Company Data
 
@@ -103,7 +118,6 @@ Always check charter.json before selecting colors/fonts.
 ```bash
 bash scripts/setup.sh                     # First-time setup (submodules, global skills, hooks, deps)
 git submodule update --init --recursive   # Init submodules
-git submodule update --remote             # Pull latest
 npm install                               # Node deps
 uv sync                                   # Python deps
 ```

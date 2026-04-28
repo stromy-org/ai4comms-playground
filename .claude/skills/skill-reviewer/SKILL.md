@@ -1,85 +1,50 @@
 ---
 name: skill-reviewer
-description: Review skill quality with playground-specific dimensions including source traceability and sandbox safety. Produces a scored report with maturity band. Use when reviewing a skill before committing, after modifications, or for periodic quality sweeps. Triggers on "review skill", "check skill quality", "skill review", "audit skill".
+description: "Review and score skill architecture quality against an 8-dimension rubric, or adapt externally-authored skills to match ClaudeCowork conventions. Two modes: Review & Maintain (audit existing skills) and Adapt External Skills (restructure imports). Triggers on: review skill, audit skill quality, score skill, adapt skill, import skill, skill modularity, improve skill, skill maturity."
 ---
 
 # Skill Reviewer
 
-Review skills for quality, safety, and traceability in the playground context.
+Evaluate skill architecture quality and adapt external skills to ClaudeCowork conventions.
 
-## When to Use
+## Scope Boundary
 
-- After sourcing a skill from upstream (verify portability)
-- After modifying a skill (verify nothing broke)
-- Before committing a skill change
-- Periodic quality sweeps across all skills
+This skill reviews **individual skill design** — architecture, modularity, company data integration, templates, and documentation quality.
 
-## Dimensions
+**This skill** answers: "Is this skill well-designed? How can it improve?"
+**instruction-audit** answers: "Is the instruction system wired correctly?" (file existence, symlinks, frontmatter presence, AGENTS.md sync)
+**quality-check** answers: "Is the repo healthy?" (linting, validation, symlinks, coverage)
 
-| # | Dimension | What It Measures | Max Score |
-|---|-----------|-----------------|-----------|
-| 1 | Frontmatter & Triggering | Name conventions, description clarity, trigger accuracy | 3 |
-| 2 | Source Traceability | Has SOURCE.md? Origin documented? Delta from upstream tracked? | 3 |
-| 3 | Sandbox Safety | No hardcoded stromy-org paths? No upstream/ refs in outputs? No broken paths? | 3 |
-| 4 | Progressive Disclosure | Line count, references/ usage, load triggers | 3 |
-| 5 | Self-Containment | No cross-skill activation commands, naming, directory structure | 3 |
-| 6 | Documentation & Instruction Craft | Workflows, decision trees, reasoning, freedom vs. rigidity | 3 |
-| 7 | Evaluation Readiness | Eval prompts, testable outputs, feedback loops | 3 |
+No overlap — these three complement each other.
 
-### Dimension Details
+## Mode 1: Review & Maintain
 
-#### D1: Frontmatter & Triggering (3 pts)
+Score one or more skills against the 8-dimension rubric.
 
-- 3: Name matches directory, description is specific with trigger phrases, "pushy" enough to fire
-- 2: Name matches, description present but vague or missing triggers
-- 1: Missing fields or name doesn't match directory
+### Single Skill Review
 
-#### D2: Source Traceability (3 pts)
+1. **Select skill** — User names a skill or asks "review X"
+2. **Read skill files** — Read `SKILL.md`, list `scripts/`, `references/`, `assets/`
+3. **Domain research** (recommended) — Research current best practices for the skill's domain via web search. Skip only when the domain is highly specific with no meaningful external best-practice body. See [domain-research.md](references/domain-research.md) for methodology and skip criteria. Produces a **Best Practice Insights** section in the report and informs scoring of D4 (Templates), D7 (Documentation & Instruction Craft), and D3 (Modularity).
+4. **Load rubric** — Read [review-rubric.md](references/review-rubric.md) for scoring criteria
+5. **Score each dimension** (0-3):
 
-- 3: SOURCE.md present with origin repo, path, commit hash, date, and transforms list
-- 2: SOURCE.md present but incomplete (missing commit hash or transforms)
-- 1: No SOURCE.md for a skill that was clearly sourced from upstream
-- N/A: Skill was created from scratch in the playground (note this in report)
+| # | Dimension | What It Measures |
+|---|-----------|-----------------|
+| 1 | Frontmatter & Triggering Quality | Name conventions, description clarity, trigger accuracy, false-trigger rate |
+| 2 | Company Data Integration | Charter discovery, profile reads, content library assembly |
+| 3 | Modularity & Layer Separation | Hardcoded values, extracted utilities, layer split |
+| 4 | Template Maturity | Parameterized templates, rendering scripts, variants |
+| 5 | Progressive Disclosure | Line count, references/ usage, load triggers |
+| 6 | Self-Containment & Conventions | No cross-skill calls, workspace pattern, naming, output format coverage |
+| 7 | Documentation & Instruction Craft | Workflows, decision trees, instruction reasoning, freedom vs. rigidity |
+| 8 | Evaluation Readiness | Eval prompts, testable outputs, feedback loops, benchmarks |
 
-#### D3: Sandbox Safety (3 pts)
+Mark dimensions **N/A** when they don't apply to the skill type (e.g., utility skills skip Company Data, Template Maturity).
 
-- 3: No hardcoded paths to stromy-org, Cowork internals, or upstream/. All paths are playground-relative.
-- 2: Minor path issues (e.g., comments reference Cowork but executable paths are clean)
-- 1: Executable paths reference Cowork or stromy-org directories — skill will break
+6. **Produce report** using the format below
 
-Check for:
-- `stromy-org` in any path
-- `/Cowork/` in any path
-- `upstream/` referenced as an output or working directory
-- `.claude/companies/` (should be `companies/` in playground)
-- `../../../../` depth patterns that assume Cowork's directory structure
-
-#### D4: Progressive Disclosure (3 pts)
-
-- 3: SKILL.md under 500 lines, large reference material in references/, clear pointers
-- 2: SKILL.md 500-700 lines, or references exist but aren't well-signposted
-- 1: SKILL.md over 700 lines with no references/ offloading
-
-#### D5: Self-Containment (3 pts)
-
-- 3: No cross-skill activation commands. May mention other skills as context only.
-- 2: Mentions other skills but borderline directing (e.g., "consider using X")
-- 1: Explicitly commands activation of another skill ("run /X", "use the X skill's workflow")
-
-#### D6: Documentation & Instruction Craft (3 pts)
-
-- 3: Clear workflows, decision trees where needed, explains "why" not just "what", good balance of freedom and structure
-- 2: Functional instructions but missing rationale or overly rigid
-- 1: Vague or contradictory instructions
-
-#### D7: Evaluation Readiness (3 pts)
-
-- 3: Has evals/evals.json with ≥2 test cases, expectations defined
-- 2: Has eval structure but incomplete (1 case, or no expectations)
-- 1: No eval infrastructure
-- N/A: Maintenance/meta skill where evals aren't applicable
-
-## Report Format
+### Report Format
 
 ```markdown
 ## Skill Review: <skill-name>
@@ -89,37 +54,147 @@ Check for:
 | Dimension | Score | Notes |
 |-----------|-------|-------|
 | Frontmatter & Triggering | ?/3 | ... |
-| Source Traceability | ?/3 or N/A | ... |
-| Sandbox Safety | ?/3 | ... |
+| Company Data | ?/3 or N/A | ... |
+| Modularity | ?/3 or N/A | ... |
+| Templates | ?/3 or N/A | ... |
 | Progressive Disclosure | ?/3 | ... |
 | Self-Containment | ?/3 | ... |
 | Documentation & Instruction Craft | ?/3 | ... |
 | Evaluation Readiness | ?/3 or N/A | ... |
 | **Total** | **?/?** | **<Band>** |
+
+Maturity bands: Nascent (0-33%), Developing (34-66%), Mature (67-85%), Gold Standard (86-100%)
+
+### Best Practice Insights
+_From domain research (Step 3). Tag each finding._
+
+| Finding | Source | Applicability |
+|---------|--------|---------------|
+| <best practice> | <source URL or name> | ✅ Directly applicable / 🔄 Needs adaptation / ⬜ Not relevant |
+| ... | ... | ... |
+
+**Gaps identified:** <practices the skill should adopt>
+**Already strong:** <where the skill aligns with or exceeds industry norms>
+
+### Key Findings
+- <what the skill does well>
+- <architectural gaps>
+
+### Integration Opportunities
+- <company data fields the skill could use>
+- <content library items that could be mapped>
+- <template patterns that could be extracted>
+
+### Prioritized Recommendations
+1. <highest impact, lowest effort change>
+2. <next priority>
+3. <nice to have>
 ```
 
-## Maturity Bands
+### Review All (Sweep Mode)
 
-Bands scale proportionally when dimensions are N/A:
+When the user asks to review all skills or produce a maturity matrix:
 
-| Band | Range | Meaning |
-|------|-------|---------|
-| Nascent | 0–33% | Missing fundamentals, needs significant rework |
-| Developing | 34–66% | Functional but inconsistent, clear improvement path |
-| Mature | 67–85% | Solid architecture, minor gaps remain |
-| Gold Standard | 86–100% | Exemplary, suitable as a pattern reference |
-
-## Sweep Mode
-
-When reviewing all skills:
+1. List all skills in `.claude/skills/`
+2. For each skill, perform a quick review (read SKILL.md, score dimensions)
+3. **Skip domain research** by default (too slow for full sweep). Flag skills that would benefit from a deep review with domain research in the matrix.
+4. Load baseline scores from [review-rubric.md](references/review-rubric.md) for reference
+5. Produce a **maturity matrix**:
 
 ```markdown
 ## Skill Maturity Matrix
 
-| Skill | D1 | D2 | D3 | D4 | D5 | D6 | D7 | Total | Band |
-|-------|----|----|----|----|----|----|-----|-------|------|
-| ...   | ...| ...| ...| ...| ...| ...| ... | .../? | ...  |
+| Skill | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | Total | Band |
+|-------|----|----|----|----|----|----|----|----|-------|------|
+| ... | ... | ... | ... | ... | ... | ... | ... | ... | .../... | ... |
+
+### Summary
+- Gold Standard: N skills
+- Mature: N skills
+- Developing: N skills
+- Nascent: N skills
 
 ### Top 3 Improvement Priorities
 1. <skill> — <reason> — <suggested action>
+2. ...
+3. ...
 ```
+
+---
+
+## Maintenance Cadence
+
+### When to Re-Review
+- After a Claude model update (Sonnet/Opus version bump)
+- After significant skill edits (>20% of SKILL.md changed)
+- After convention changes (CLAUDE.md, dev-patterns.md updates)
+- Quarterly sweep recommended for the full portfolio
+
+### Drift Signals
+- Users report the skill "feels worse" or triggers incorrectly
+- Eval pass rates drop compared to previous benchmark
+- New skills create triggering conflicts with existing ones
+
+---
+
+## Mode 2: Adapt External Skills
+
+Restructure an imported or externally-authored skill to match ClaudeCowork conventions.
+
+### When to Use
+
+- User imports a skill from another repo or skill marketplace
+- User has a SKILL.md that doesn't follow conventions
+- User asks to "adapt", "import", or "restructure" a skill
+
+### Procedure
+
+1. **Intake** — Read the skill, inventory all files, classify type (format/domain/utility/integration/reference). See [adaptation-workflow.md](references/adaptation-workflow.md) Phase 1.
+
+2. **Convention mapping** — Check each convention against the adaptation checklist:
+   - Frontmatter: name + description with triggers
+   - Self-containment: no cross-skill invocation
+   - Workspace pattern: root node_modules, no workspace package.json
+   - Naming: directory = name field, kebab-case
+   - Progressive disclosure: under 700 lines, detail in references/
+   - No hardcoded brand values
+
+3. **Company data integration design** — Based on skill type:
+   - **Format/Domain skills**: Add full charter discovery + content library assembly. See [gold-standard-patterns.md](references/gold-standard-patterns.md) for the three-layer pattern.
+   - **Integration skills**: Add profile discovery only
+   - **Utility/Reference skills**: Skip (mark as N/A)
+
+4. **Template extraction** — Identify repeated output patterns, parameterize with CSS variables or template literals, create rendering mechanism.
+
+5. **Restructure & package** — Create directory structure, write SKILL.md, organize resources, validate with `quick_validate.py`.
+
+6. **Gap report** — Document changes, remaining manual work, and before/after scores. See [adaptation-workflow.md](references/adaptation-workflow.md) Phase 6.
+
+### Quick Convention Checklist
+
+| Convention | Required | Check |
+|------------|----------|-------|
+| SKILL.md exists | Yes | File present in skill directory |
+| Frontmatter has name + description | Yes | YAML block with required fields |
+| Name is kebab-case | Yes | Lowercase, hyphens, no spaces |
+| Name matches directory | Yes | `name: foo-bar` in `foo-bar/SKILL.md` |
+| Description has triggers | Recommended | Includes when/how the skill activates |
+| Body under 700 lines | Yes | Count lines after frontmatter |
+| No cross-skill invocation | Yes | No "run /other-skill" patterns |
+| Root node_modules | Yes (if scripts) | `require('../../node_modules/...')` |
+| No workspace package.json | Yes (if scripts) | Scripts use root dependencies |
+| Output to workspace/\<project\>/output/ | Recommended | Standard output location |
+| Standard subdirectory names | Yes | Use `references/` (not `rules/`), `scripts/`, `assets/`, `templates/` |
+
+---
+
+## Reference Files
+
+Load these on demand — do not read all at once.
+
+| File | When to Load |
+|------|-------------|
+| [domain-research.md](references/domain-research.md) | When performing domain research (Mode 1, Step 3). Contains research methodology, query strategy, and applicability classification guide. |
+| [review-rubric.md](references/review-rubric.md) | When scoring a skill (Mode 1). Contains full criteria for all 8 dimensions, baseline scores, and cross-model notes. |
+| [gold-standard-patterns.md](references/gold-standard-patterns.md) | When assessing modularity/integration or designing adaptations (Mode 2). Contains three-layer architecture, charter discovery, content library assembly, and consulting deliverable quality patterns. |
+| [adaptation-workflow.md](references/adaptation-workflow.md) | When adapting an external skill (Mode 2). Contains triage (Phase 0) plus 6-phase procedure with checklists and report template. |

@@ -1,66 +1,140 @@
 ---
 name: quality-check
-description: Run playground structural validation checks and report findings. Validates skill completeness, symlinks, upstream submodule state, guardrails, and cross-references.
+description: Run the full quality suite (Python linting, skill validation, company data, symlink integrity, bootstrap version) and report findings in a structured format. Triggers on "quality check", "run checks", "validate repo", "check quality".
 ---
 
 # Quality Check
 
-Run the ai4comms-playground quality suite and report findings.
+Run the ClaudeCowork quality suite and report findings with structured categorization.
 
 ## When to Use
 
-- Before committing changes
-- After sourcing or creating new skills
-- After modifying company data
-- Periodic health checks
+- Before committing significant changes
+- After adding new skills or company profiles
+- Periodic repository health checks
+- When something feels broken
 
 ## Workflow
 
-### Phase 1: Structural Checks
+### Phase 1: Run All Checks
 
-1. **Symlinks valid** — Verify all symlinks resolve correctly:
-   - `.agents/skills` → `.claude/skills`
-   - `.github/skills` → `.claude/skills`
+Run each check independently and capture results:
 
-2. **SKILL.md frontmatter valid** — For each directory in `.claude/skills/`, verify `SKILL.md` exists and has valid YAML frontmatter with `name` and `description` fields.
+#### 1. Python Linting
+```bash
+uv run ruff check
+```
 
-3. **Upstream submodules intact** — Verify `upstream/cowork` and `upstream/duke-strategies-plugin` exist and are valid git submodules. Check that no local modifications exist in upstream directories.
+#### 2. Python Tests (if they exist)
+```bash
+uv run pytest tests/ -v
+```
+Skip if `tests/` is empty or doesn't exist.
 
-4. **Git hooks configured** — Verify `.githooks/pre-commit` exists and `core.hooksPath` is set to `.githooks`.
+#### 3. Skill Validation
 
-5. **Company data valid** — For each directory in `companies/`, verify `charter.json` and `profile.json` exist and are valid JSON.
+For every directory in `.claude/skills/`:
 
-### Phase 2: Cross-Reference Checks
+**Existence**: `SKILL.md` exists in each skill directory.
 
-1. **CLAUDE.md skill refs** — Every skill referenced in CLAUDE.md's Skill Workflow section has a corresponding directory in `.claude/skills/`.
+**Frontmatter**: Each SKILL.md starts with `---` and has `name` and `description` fields.
 
-2. **Skill dirs in CLAUDE.md** — Every directory in `.claude/skills/` is mentioned in CLAUDE.md.
+**Size**: Body (after frontmatter) is under 700 lines.
+```bash
+# Count body lines (after frontmatter) for each skill
+for skill in .claude/skills/*/; do
+  if [ -f "$skill/SKILL.md" ]; then
+    end_fm=$(awk '/^---$/{c++;if(c==2){print NR;exit}}' "$skill/SKILL.md")
+    total=$(wc -l < "$skill/SKILL.md")
+    body=$((total - end_fm))
+    echo "$skill: $body body lines"
+  else
+    echo "$skill: MISSING SKILL.md"
+  fi
+done
+```
 
-3. **AGENTS.md self-contained** — Verify AGENTS.md contains no `.claude/rules/` references and no `@` imports.
+**Self-containment**: No skill commands activation of another skill. Search for patterns like:
+- `run /` or `use /` followed by a skill name
+- "Use the X skill's workflow" or "delegate to the X skill" — commands that direct Claude to activate a specific skill
+- **Not violations**: Naming a skill as informational guidance ("the `docx` skill handles Word documents", "for PPTX output, the `pptx` skill provides branded presentations") or informational scope boundaries ("X handles Y, this skill handles Z"). Mentioning is context; directing is coupling.
+- Exception: references to `skill-creator` for guidance are acceptable
 
-4. **Source traceability** — For each skill with a `SOURCE.md`, verify it contains: origin repo, origin path, source commit hash, date sourced.
+#### 4. Company Data Validation
 
-5. **Sandbox safety** — Grep all skills for hardcoded paths to stromy-org or references to upstream/ in outputs. Flag any findings.
+For every directory in `client-data/clients/`:
 
-### Phase 3: Report
+**Required files**:
+- `profile.json` exists
+- `charter.json` exists
+
+**Charter schema**: `charter.json` contains `colors` and `fonts` keys.
+
+**Template completeness**: `_example/` has all required files:
+- `profile.json`
+- `charter.json`
+- `proposals/case-studies.json`
+- `proposals/team-bios.json`
+- `proposals/methodologies.json`
+- `proposals/boilerplate.json`
+- `proposals/testimonials.json`
+
+#### 5. Symlink Integrity
+```bash
+ls -la .agents/skills .github/skills
+```
+Both must be symlinks pointing to `../.claude/skills`.
+
+#### 6. Output Format Cross-Reference
+
+For each skill that mentions producing files in a specific format (PDF, DOCX, PPTX, XLSX):
+- If the skill has an "Output Capabilities" or "Output Format" section, verify each listed format skill actually exists in `.claude/skills/` with a valid SKILL.md
+- If the skill mentions producing PDF/DOCX/PPTX/XLSX in its body without an Output Capabilities section, check it references the format skill inline
+- Flag as advisory if missing (not CI-blocking, but should be addressed)
+
+#### 7. Instruction Coverage
+
+Verify every `.claude/skills/*/` directory name appears in:
+- CLAUDE.md "Skill Workflow" section
+- AGENTS.md "Available Skills" section
+
+#### 8. Bootstrap Version
+```bash
+python -m json.tool .claude/bootstrap-version.json
+```
+- `.claude/bootstrap-version.json` exists and is valid JSON
+- `skills_generated` list matches actual `.claude/skills/` directories
+
+### Phase 2: Report Results
 
 ```
-## Quality Report — ai4comms-playground
+## Quality Report
 
-### Structural Checks
-- [x] Symlinks: 2/2 valid
-- [x] SKILL.md frontmatter: N/N valid
-- [x] Upstream submodules: intact, no local modifications
-- [x] Git hooks: configured
-- [x] Company data: valid
+### CI-Blocking Issues
+- [ ] Ruff: N violations
+- [ ] Skill validation: N issues (missing SKILL.md, missing frontmatter, oversized)
+- [ ] Company data: N issues (missing files, invalid schema)
+- [ ] Symlinks: PASS/FAIL
+- [ ] Tests: N failures
 
-### Cross-Reference Checks
-- [x] CLAUDE.md skill refs: N/N exist
-- [x] Skill dirs in CLAUDE.md: N/N referenced
-- [x] AGENTS.md self-contained: PASS
-- [x] Source traceability: N/N sourced skills have valid SOURCE.md
-- [x] Sandbox safety: PASS (no stromy-org paths found)
+### Instruction Issues
+- [ ] Instruction coverage: PASS/FAIL
+- [ ] AGENTS.md self-containment: PASS/FAIL
+- [ ] Bootstrap version: VALID/INVALID/MISSING
 
-### Summary
-Total checks: N passed, N warnings, N failures
+### Advisory Issues
+- [ ] Skill self-containment: N potential violations
+- [ ] Skill size: N skills over 600 lines (approaching limit)
+- [ ] Output format coverage: N skills mention formats without referencing format skills
+
+### Recommendations
+1. ...
 ```
+
+### Phase 3: Recommendations
+
+Based on findings, suggest:
+- Which issues are blocking (must fix)
+- Which are advisory (should fix but not urgent)
+- Priority order for fixes
+- Specific remediation steps for each failure

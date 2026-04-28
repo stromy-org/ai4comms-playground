@@ -4,7 +4,6 @@
 # are allowed — those are just commit hash references, not file edits.
 
 # Get staged files that are inside upstream/ but deeper than the submodule root
-# (submodule pointer changes show as "upstream/cowork", not "upstream/cowork/...")
 BLOCKED=$(git diff --cached --name-only | grep '^upstream/.*/' || true)
 
 if [ -n "$BLOCKED" ]; then
@@ -15,7 +14,41 @@ if [ -n "$BLOCKED" ]; then
   echo "$BLOCKED" | sed 's/^/  /'
   echo ""
   echo "The upstream/ directory contains reference submodules that must not be modified."
-  echo "To work with a skill from upstream, use: /source-skill <skill-name>"
   echo ""
   exit 1
+fi
+
+# Protect LICENSE files from deletion or modification
+LICENSE_CHANGES=$(git diff --cached --name-only --diff-filter=DM | grep -E '(^LICENSE$|LICENSE\.txt$|^CONTRIBUTING\.md$|^\.github/CODEOWNERS$)' || true)
+
+if [ -n "$LICENSE_CHANGES" ]; then
+  echo ""
+  echo "ERROR: Cannot modify or delete protected files"
+  echo ""
+  echo "Blocked files:"
+  echo "$LICENSE_CHANGES" | sed 's/^/  /'
+  echo ""
+  echo "LICENSE, CONTRIBUTING.md, and CODEOWNERS are managed centrally."
+  echo "Reach out to William if changes are needed."
+  echo ""
+  exit 1
+fi
+
+# Warn (not block) when staging changes to synced skill files
+SYNCED_SKILLS="docx|messaging-framework|notebooklm|organic-social-campaign|paid-social-campaign|pdf|pptx|pptx-hd|press-release|proposal|quality-check|remotion-video|skill-reviewer|xlsx"
+SYNCED_CHANGES=$(git diff --cached --name-only | grep -E "^\.claude/skills/($SYNCED_SKILLS)/" || true)
+
+if [ -n "$SYNCED_CHANGES" ]; then
+  echo ""
+  echo "WARNING: You are committing changes to synced skills"
+  echo ""
+  echo "These files are managed by the Cowork sync pipeline and will be"
+  echo "overwritten on the next sync. To customize a synced skill, duplicate"
+  echo "it with a -custom suffix (e.g., pptx-hd -> pptx-hd-custom)."
+  echo ""
+  echo "Modified synced files:"
+  echo "$SYNCED_CHANGES" | sed 's/^/  /'
+  echo ""
+  echo "Proceeding with commit (this is a warning, not a block)..."
+  echo ""
 fi
