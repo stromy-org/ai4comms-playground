@@ -10,7 +10,6 @@ Patterns for skill development, workspace builds, and company data in the playgr
 - **Progressive disclosure**: Frontmatter always loaded → SKILL.md on trigger → `references/` on demand
 - **Size limit**: Keep SKILL.md under 700 lines. Move detail to `references/`
 - **New skills**: Use the `skill-creator` skill for scaffolding
-- **Sourced skills**: Use the `source-skill` skill to safely copy from upstream
 
 ## Workspace Conventions
 
@@ -37,6 +36,27 @@ companies/<client-slug>/
 ```
 
 Always check `charter.json` before manually selecting colors or fonts.
+
+## Branch Workflow
+
+The playground uses a simple branch model for collaboration:
+
+| Branch | Purpose | Who pushes |
+|--------|---------|------------|
+| `main` | Stable, reviewed code + sync pipeline target | PRs only (branch protection) |
+| `dev/emma` | Emma's working branch | Emma |
+| `feat/<name>` | Clean single-feature branches for PRs | Created via `cherry-pick-pr` skill |
+
+### Daily workflow
+
+1. Work on `dev/emma` — commit freely, experiment, iterate
+2. Periodically merge `main` into `dev/emma` to stay current with sync updates: `git merge main`
+3. When a feature is ready for review, use `/cherry-pick-pr` to extract a clean PR
+4. After PR is merged, pull `main` and merge into `dev/emma`
+
+### Why not work directly on feature branches?
+
+Dev branches accumulate mixed changes — WIP commits, unrelated experiments, debug leftovers. The `cherry-pick-pr` skill extracts only the files that belong to a specific feature into a clean branch, making PRs easy to review.
 
 ## Code Standards
 
