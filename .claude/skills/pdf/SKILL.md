@@ -129,6 +129,10 @@ When the charter has an `images` block (`charter.images.catalog`), use brand pho
 
 **Fallback**: When no `charter.images` block exists, skip brand photography and use solid-color headers/accents only.
 
+### Diagram Integration
+
+When a page would benefit from a process flow, architecture diagram, org chart, timeline, or other structural visual, use the `diagram` skill to generate a branded PNG. The diagram skill reads the same charter and produces images that match brand colors and typography. Embed the resulting PNG using the same image embedding pattern as logos and brand photography.
+
 ### Company identity data
 When a company directory exists, also check for `profile.json` at `client-data/clients/<name>/profile.json`. If present, use company identity fields:
 

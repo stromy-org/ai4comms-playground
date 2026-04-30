@@ -531,7 +531,16 @@ async function extractSlideDataHD(page) {
 
         liElements.forEach((li, idx) => {
           const isLast = idx === liElements.length - 1;
-          const runs = parseInlineFormatting(li, { breakLine: false });
+          const liComputed = window.getComputedStyle(li);
+          const liBaseOptions = {
+            breakLine: false,
+            fontSize: pxToPoints(liComputed.fontSize),
+            fontFace: liComputed.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
+            color: rgbToHex(liComputed.color),
+          };
+          const isBold = liComputed.fontWeight === 'bold' || parseInt(liComputed.fontWeight) >= 600;
+          if (isBold) liBaseOptions.bold = true;
+          const runs = parseInlineFormatting(li, liBaseOptions);
           if (runs.length > 0) {
             runs[0].text = runs[0].text.replace(/^[•\-\*▪▸]\s*/, '');
             runs[0].options.bullet = { indent: textIndent };
@@ -602,7 +611,15 @@ async function extractSlideDataHD(page) {
       const hasFormatting = el.querySelector('b, i, u, strong, em, span, br');
       if (hasFormatting) {
         const transformStr = computed.textTransform;
-        const runs = parseInlineFormatting(el, {}, [], (str) => applyTextTransform(str, transformStr));
+        const isBold = computed.fontWeight === 'bold' || parseInt(computed.fontWeight) >= 600;
+        const runBaseOptions = {
+          fontSize: baseStyle.fontSize,
+          fontFace: baseStyle.fontFace,
+          color: baseStyle.color,
+        };
+        if (isBold) runBaseOptions.bold = true;
+        if (computed.fontStyle === 'italic') runBaseOptions.italic = true;
+        const runs = parseInlineFormatting(el, runBaseOptions, [], (str) => applyTextTransform(str, transformStr));
         elements.push({
           type: el.tagName.toLowerCase(), text: runs,
           position: { x: pxToInch(x), y: pxToInch(y), w: pxToInch(w), h: pxToInch(h) },
@@ -692,10 +709,28 @@ async function addBackgroundHD(slideData, targetSlide, page, tmpDir) {
 /**
  * Add elements to slide, with gradient-aware shape conversion.
  */
-function addElementsHD(slideData, targetSlide, pres) {
+async function addElementsHD(slideData, targetSlide, pres, tmpDir) {
   for (const el of slideData.elements) {
     if (el.type === 'image') {
       let imagePath = el.src.startsWith('file://') ? el.src.replace('file://', '') : el.src;
+
+      // Convert SVG to PNG — PowerPoint has unreliable SVG support
+      if (imagePath.toLowerCase().endsWith('.svg')) {
+        try {
+          const pngPath = path.join(tmpDir, `svg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.png`);
+          const scale = 3; // 3x for crisp rendering
+          const widthPx = Math.round(el.position.w * PX_PER_IN * scale);
+          const heightPx = Math.round(el.position.h * PX_PER_IN * scale);
+          await sharp(imagePath)
+            .resize(widthPx, heightPx, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .png()
+            .toFile(pngPath);
+          imagePath = pngPath;
+        } catch (err) {
+          console.warn(`SVG→PNG conversion failed for ${imagePath}: ${err.message}`);
+        }
+      }
+
       targetSlide.addImage({
         path: imagePath,
         x: el.position.x, y: el.position.y, w: el.position.w, h: el.position.h
@@ -735,13 +770,15 @@ function addElementsHD(slideData, targetSlide, pres) {
       targetSlide.addText(el.text || '', shapeOptions);
 
     } else if (el.type === 'list') {
+      const listW = el.position.w + el.position.w * 0.05;
+      const listH = el.position.h + el.position.h * 0.05;
       targetSlide.addText(el.items, {
-        x: el.position.x, y: el.position.y, w: el.position.w, h: el.position.h,
+        x: el.position.x, y: el.position.y, w: listW, h: listH,
         fontSize: el.style.fontSize, fontFace: el.style.fontFace,
         color: el.style.color, align: el.style.align, valign: 'top',
         lineSpacing: el.style.lineSpacing,
         paraSpaceBefore: el.style.paraSpaceBefore, paraSpaceAfter: el.style.paraSpaceAfter,
-        margin: el.style.margin
+        margin: el.style.margin, inset: 0, autoFit: false, shrinkText: false, wrap: true
       });
 
     } else {
@@ -749,31 +786,36 @@ function addElementsHD(slideData, targetSlide, pres) {
       const lineHeight = el.style.lineSpacing || el.style.fontSize * 1.2;
       const isSingleLine = el.position.h <= lineHeight * 1.5;
 
+      // PowerPoint text engine wraps differently from CSS — add width margin
+      // to prevent premature wrapping. Larger margin for multi-line text.
       let adjustedX = el.position.x;
       let adjustedW = el.position.w;
-
-      if (isSingleLine) {
-        const widthIncrease = el.position.w * 0.02;
-        const align = el.style.align;
-        if (align === 'center') {
-          adjustedX -= widthIncrease / 2;
-          adjustedW += widthIncrease;
-        } else if (align === 'right') {
-          adjustedX -= widthIncrease;
-          adjustedW += widthIncrease;
-        } else {
-          adjustedW += widthIncrease;
-        }
+      let adjustedH = el.position.h;
+      const widthFactor = isSingleLine ? 0.03 : 0.05;
+      const widthIncrease = el.position.w * widthFactor;
+      const align = el.style.align;
+      if (align === 'center') {
+        adjustedX -= widthIncrease / 2;
+        adjustedW += widthIncrease;
+      } else if (align === 'right') {
+        adjustedX -= widthIncrease;
+        adjustedW += widthIncrease;
+      } else {
+        adjustedW += widthIncrease;
+      }
+      // Add height margin for multi-line text to prevent clipping
+      if (!isSingleLine) {
+        adjustedH += el.position.h * 0.05;
       }
 
       const textOptions = {
-        x: adjustedX, y: el.position.y, w: adjustedW, h: el.position.h,
+        x: adjustedX, y: el.position.y, w: adjustedW, h: adjustedH,
         fontSize: el.style.fontSize, fontFace: el.style.fontFace,
         color: el.style.color, bold: el.style.bold, italic: el.style.italic,
         underline: el.style.underline, valign: 'top',
         lineSpacing: el.style.lineSpacing,
         paraSpaceBefore: el.style.paraSpaceBefore, paraSpaceAfter: el.style.paraSpaceAfter,
-        inset: 0
+        inset: 0, autoFit: false, shrinkText: false, wrap: true
       };
 
       if (el.style.align) textOptions.align = el.style.align;
@@ -886,12 +928,61 @@ async function html2pptxHD(htmlFile, pres, options = {}) {
     }
 
     // Add native elements
-    addElementsHD(slideData, targetSlide, pres);
+    await addElementsHD(slideData, targetSlide, pres, tmpDir);
 
     return { slide: targetSlide, placeholders: slideData.placeholders };
 
   } finally {
     await browser.close();
+  }
+}
+
+/**
+ * Fix PptxGenJS Content_Types.xml bug: phantom slide master entries.
+ *
+ * PptxGenJS registers Content_Types overrides for slideMaster2..N even though
+ * only slideMaster1.xml exists. PowerPoint detects the missing parts and
+ * shows a repair warning. This function removes the phantom entries.
+ *
+ * Call after pptx.writeFile() completes.
+ *
+ * @param {string} pptxPath - Absolute path to the .pptx file
+ */
+async function repairPptx(pptxPath) {
+  const JSZip = require('jszip');
+  const data = fs.readFileSync(pptxPath);
+  const zip = await JSZip.loadAsync(data);
+
+  const ctFile = zip.file('[Content_Types].xml');
+  if (!ctFile) return;
+
+  let ct = await ctFile.async('string');
+
+  // Collect actual slideMaster files in the archive
+  const masterFiles = new Set();
+  zip.folder('ppt/slideMasters').forEach((relativePath) => {
+    if (relativePath.endsWith('.xml') && !relativePath.includes('_rels')) {
+      masterFiles.add(relativePath); // e.g. "slideMaster1.xml"
+    }
+  });
+
+  // Remove Override entries for non-existent slide masters
+  const before = ct;
+  ct = ct.replace(/<Override\s+PartName="\/ppt\/slideMasters\/(slideMaster\d+\.xml)"[^>]*\/>/g,
+    (match, filename) => {
+      if (masterFiles.has(filename)) return match;
+      return ''; // Remove phantom entry
+    }
+  );
+
+  if (ct !== before) {
+    zip.file('[Content_Types].xml', ct);
+    const fixed = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+    fs.writeFileSync(pptxPath, fixed);
   }
 }
 
@@ -902,5 +993,6 @@ html2pptxHD.HD_WIDTH_IN = HD_WIDTH_IN;
 html2pptxHD.HD_HEIGHT_IN = HD_HEIGHT_IN;
 html2pptxHD.parseCSSGradient = parseCSSGradient;
 html2pptxHD.rasterizeElement = rasterizeElement;
+html2pptxHD.repairPptx = repairPptx;
 
 module.exports = html2pptxHD;

@@ -219,6 +219,10 @@ async function build() {
   }
 
   await pptx.writeFile({ fileName: OUTPUT });
+
+  // Fix PptxGenJS Content_Types.xml bug (phantom slide master entries)
+  await html2pptxHD.repairPptx(OUTPUT);
+
   console.log(`Done: ${OUTPUT}`);
 }
 

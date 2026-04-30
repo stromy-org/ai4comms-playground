@@ -7,4 +7,4 @@ You may use and modify this file within this repository only.
 Redistribution, extraction, or use outside this repository is prohibited
 without prior written consent from Stromy BVBA.
 
-For licensing enquiries: william@stromy.eu
+For licensing enquiries: william.masquelier@stromy.com.au

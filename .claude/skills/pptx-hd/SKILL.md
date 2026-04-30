@@ -123,6 +123,10 @@ The brand image catalog (`charter.images.catalog` + `manifest.json`) provides a 
 
 Use motifs sparingly on divider and content slides. Match images to their `motifAffinity` metadata.
 
+### Diagram Integration
+
+When a slide would benefit from a process flow, architecture diagram, org chart, timeline, or other structural visual, use the `diagram` skill to generate a branded PNG. The diagram skill reads the same charter and produces images that match brand colors and typography. Embed the resulting PNG using the same image embedding pattern as logos and brand photography.
+
 ## Slide Architecture
 
 ### Default branded deck structure

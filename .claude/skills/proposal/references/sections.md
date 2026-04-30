@@ -160,7 +160,7 @@ Win themes should be client-centric (framed as client benefit, not firm capabili
 - Show how each phase connects to objectives
 - Be specific about methods without being overly technical
 - Highlight what makes your approach different from a generic one
-- Include visual aids: phase diagrams, process flows
+- Include visual aids: phase diagrams, process flows. When the methodology has 3+ phases, consider generating a process flow diagram using the `diagram` skill. Timeline diagrams suit the "Work Plan" section. Org charts suit the "Team" section.
 
 **Common mistakes:**
 - Too generic ("we will assess, design, and implement")

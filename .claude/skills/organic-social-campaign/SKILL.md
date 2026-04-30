@@ -329,6 +329,10 @@ This skill owns organic social campaign architecture — editorial strategy, con
 - Apply heading color from `colors.primary`, body font from `fonts.body`
 - Logo from `brand/logos/` (path in charter `logo` section)
 
+### Diagram Integration
+
+Funnel/flow diagrams (content funnel, campaign architecture, editorial workflow) can be generated using the `diagram` skill for branded visual output.
+
 ## Output Location
 
 Deliverables follow the standard workspace project structure:

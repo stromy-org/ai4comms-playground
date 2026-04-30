@@ -370,6 +370,10 @@ This skill owns paid social campaign architecture — targeting, bidding, creati
 - Apply heading color from `colors.primary`, body font from `fonts.body`
 - Logo from `brand/logos/` (path in charter `logo` section)
 
+### Diagram Integration
+
+Funnel/flow diagrams (campaign architecture, A/B decision tree, conversion funnel) can be generated using the `diagram` skill for branded visual output.
+
 ## Output Location
 
 Deliverables follow the standard workspace project structure:

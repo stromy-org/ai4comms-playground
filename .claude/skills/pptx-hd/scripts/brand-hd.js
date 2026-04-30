@@ -37,7 +37,8 @@ function loadBrandSystem(clientDir) {
 
   let manifest = [];
   if (fs.existsSync(manifestPath)) {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    const raw = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    manifest = Array.isArray(raw) ? raw : (raw.library || []);
   }
 
   let guidelines = '';
@@ -45,23 +46,22 @@ function loadBrandSystem(clientDir) {
     guidelines = fs.readFileSync(guidelinesPath, 'utf-8');
   }
 
-  // Resolve logo paths
-  const logosDir = path.join(clientDir, 'logos');
+  // Resolve logo paths (charter paths are relative to clientDir, e.g. "logos/logo.svg")
   const logos = {
     primary: charter.logo && charter.logo.primary
-      ? path.join(logosDir, charter.logo.primary)
+      ? path.join(clientDir, charter.logo.primary)
       : null,
     white: charter.logo && charter.logo.white
-      ? path.join(logosDir, charter.logo.white)
+      ? path.join(clientDir, charter.logo.white)
       : null,
     mono: charter.logo && charter.logo.mono
-      ? path.join(logosDir, charter.logo.mono)
+      ? path.join(clientDir, charter.logo.mono)
       : null,
     icon: charter.logo && charter.logo.icon
-      ? path.join(logosDir, charter.logo.icon)
+      ? path.join(clientDir, charter.logo.icon)
       : null,
     symbol: charter.logo && charter.logo.symbol
-      ? path.join(logosDir, charter.logo.symbol)
+      ? path.join(clientDir, charter.logo.symbol)
       : null,
   };
 
@@ -141,13 +141,15 @@ function pickImage(brand, role, usedImages, options = {}) {
   usedImages.add(pick.id);
 
   // Resolve paths — prefer hero crop for slides
+  // Manifest paths are relative to clientDir (e.g., "images/heroes/foo.jpg")
+  const { clientDir } = brand;
   let imagePath;
   if (pick.crops && pick.crops['hero-16x9']) {
-    imagePath = path.join(heroesDir, pick.crops['hero-16x9']);
+    imagePath = path.join(clientDir, pick.crops['hero-16x9']);
   } else if (pick.processed) {
-    imagePath = path.join(imagesDir, pick.processed);
+    imagePath = path.join(clientDir, pick.processed);
   } else if (pick.source) {
-    imagePath = path.join(imagesDir, pick.source);
+    imagePath = path.join(clientDir, pick.source);
   } else {
     imagePath = path.join(imagesDir, pick.id + '.jpg');
   }
@@ -239,19 +241,61 @@ function getTextSafeZoneCSS(zone) {
 }
 
 /**
- * Generate the full <style> block for an HD slide, including Google Fonts import
+ * Build @font-face declarations from @fontsource npm packages.
+ * Reads CSS files from node_modules and rewrites relative url() paths to absolute file:// paths.
+ * Falls back to Google Fonts CDN if packages are not installed.
+ *
+ * @returns {string} CSS @font-face declarations or @import fallback
+ */
+function getFontCSS() {
+  // Font packages and the weights we need
+  const fonts = [
+    { pkg: '@fontsource/fraunces', weights: ['400', '500', '600', '700', '800', '900'] },
+    { pkg: '@fontsource/plus-jakarta-sans', weights: ['400', '500', '600', '700', '800'] },
+    { pkg: '@fontsource/ibm-plex-mono', weights: ['400', '500', '600'] },
+  ];
+
+  try {
+    const cssBlocks = [];
+    for (const font of fonts) {
+      // Resolve package directory from node_modules
+      const pkgDir = path.dirname(require.resolve(`${font.pkg}/package.json`));
+      for (const weight of font.weights) {
+        const cssFile = path.join(pkgDir, `${weight}.css`);
+        if (fs.existsSync(cssFile)) {
+          let css = fs.readFileSync(cssFile, 'utf-8');
+          // Rewrite relative url(./files/...) to absolute file:// paths
+          const filesDir = path.join(pkgDir, 'files');
+          css = css.replace(/url\(\.\/files\//g, `url(file://${filesDir}/`);
+          cssBlocks.push(css);
+        }
+      }
+    }
+    if (cssBlocks.length > 0) return cssBlocks.join('\n');
+  } catch (_) {
+    // Packages not installed — fall through to CDN
+  }
+
+  // Fallback: Google Fonts CDN
+  return `@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap');`;
+}
+
+/**
+ * Generate the full <style> block for an HD slide, including font declarations
  * and the client's tokens.css.
  *
  * @param {Object} brand - Brand system from loadBrandSystem()
  * @returns {string} Complete CSS for injection into slide HTML <head>
  */
 function getSlideCSS(brand) {
-  return `@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+  return `${getFontCSS()}
 
 /* === Client tokens.css === */
 ${brand.tokensCSS}
 
 /* === HD slide base === */
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
   margin: 0;
   padding: 0;

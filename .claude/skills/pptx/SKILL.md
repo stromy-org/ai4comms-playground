@@ -104,6 +104,10 @@ When the charter has a `pptxAssets` section, use pre-rendered presentation asset
 - Use `orientation` to pick images suited to the layout — landscape for full-bleed, portrait for split layouts
 - Track used images to avoid repetition (already documented above)
 
+### Diagram Integration
+
+When a slide would benefit from a process flow, architecture diagram, org chart, timeline, or other structural visual, use the `diagram` skill to generate a branded PNG. The diagram skill reads the same charter and produces images that match brand colors and typography. Embed the resulting PNG using the same image embedding pattern as logos and brand photography.
+
 ### CSS variable discipline
 
 **Always use CSS variables from `_base.css` instead of hardcoded hex values** when writing slide HTML. This ensures slides update automatically if the charter changes.
