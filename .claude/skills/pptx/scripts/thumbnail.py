@@ -46,7 +46,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-from inventory import extract_text_inventory
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 
@@ -164,6 +163,8 @@ def get_placeholder_regions(pptx_path):
     Each region is a dict with 'left', 'top', 'width', 'height' in inches.
     slide_dimensions is a tuple of (width_inches, height_inches).
     """
+    from inventory import extract_text_inventory  # optional dep — only needed with --outline-placeholders
+
     prs = Presentation(str(pptx_path))
     inventory = extract_text_inventory(pptx_path, prs)
     placeholder_regions = {}

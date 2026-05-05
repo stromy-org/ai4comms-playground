@@ -209,7 +209,7 @@ For each slide, generate a self-contained HTML file:
 - Use `box-shadow` for depth — converts to PowerPoint shadow properties
 - Use `border-radius` — converts to rounded corners in PPTX
 - Use CSS `backdrop-filter: blur(...)` sparingly — rasterized as fallback
-- Text MUST be in semantic HTML elements (`<h1>`-`<h6>`, `<p>`, `<ul>`, `<ol>`)
+- Text MUST be in semantic HTML elements (`<h1>`-`<h6>`, `<p>`, `<ul>`, `<ol>`) — bare text nodes directly inside `<div>` fail the HTML validator and require an extra iteration to fix
 
 ### Phase 4: Build Script
 
