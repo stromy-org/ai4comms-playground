@@ -21,7 +21,7 @@ Look for a charter file at `client-data/clients/<name>/charter.json` where `<nam
 
 - **Colors**: `primary`, `secondary`, `accent`, `background`, `backgroundAlt`, `text`, `textLight`, plus semantic colors (`success`, `warning`, `error`)
 - **Fonts**: `heading` (family + weight + fallback), `body` (family + weight + fallback), `mono` (family + fallback)
-- **Logo**: filename(s) in the same `brand/` directory (e.g. `logo.png`, `logo_white.png`) with max dimensions and `"sizing": "contain"` — the logo must fit within the `maxWidth`/`maxHeight` bounding box while preserving its natural aspect ratio (never stretch or squash)
+- **Logo**: filename(s) in `client-data/clients/<name>/` (e.g. `logos/logo.png`) — fields: `primary` (SVG), `png` (raster, preferred for DOCX), `white`/`whitePng` (on dark backgrounds), with `maxWidth`/`maxHeight` bounding box and `"sizing": "contain"`
 - **Document settings**: `document.margins` (top/bottom/left/right), `document.header`, `document.footer`, `document.headingColor`, `document.tableHeaderColor`
 - **Formatting rules**: `formatting.headingThreshold`, `formatting.accentCycleColors`, `formatting.autoContrastText`
 
@@ -30,8 +30,8 @@ Look for a charter file at `client-data/clients/<name>/charter.json` where `<nam
 When a charter exists, read it and map fields to docx-js parameters:
 
 ```javascript
-const charter = JSON.parse(fs.readFileSync('client-data/clients/<name>/charter.json', 'utf-8'));
-const brandDir = path.resolve('client-data/clients/<name>/brand');
+const clientDir = path.resolve('client-data/clients/<name>');
+const charter = JSON.parse(fs.readFileSync(path.join(clientDir, 'charter.json'), 'utf-8'));
 
 // Margins → Document sections
 const margins = charter.document?.margins;
@@ -52,8 +52,8 @@ const headingFallback = charter.fonts.heading.fallback; // e.g. "Arial, sans-ser
 const bodyFont = charter.fonts.body.family;          // e.g. "Verdana"
 const bodyFallback = charter.fonts.body.fallback;    // e.g. "Arial, sans-serif"
 
-// Logo → Header image
-const logoPath = path.join(brandDir, charter.logo?.primary || 'logo.png');
+// Logo → use png/whitePng fields; loadLogoBufferForDocx handles SVG fallback
+// See "SVG Logos — Always Convert to PNG" section below
 ```
 
 Key mappings:
@@ -67,7 +67,7 @@ Key mappings:
 | `document.margins` | `SectionProperties.page.margin` |
 | `document.headingColor` | Color for `Heading1`-`Heading6` styles |
 | `document.tableHeaderColor` | Background color for table header rows |
-| `logo.primary` | `Header` image via `ImageRun` (preserve aspect ratio — see Image Sizing Rule below) |
+| `logo.png` / `logo.whitePng` | `Header` image via `ImageRun` — use PNG fields (raster); call `loadLogoBufferForDocx` if only SVG is available |
 | `fonts.*.fallback` | CSS-style fallback stack for font substitution |
 | `formatting.headingThreshold` | Apply heading font to text >= this pt size |
 | `formatting.accentCycleColors` | Cycle charter color keys for accent borders, callout boxes |
@@ -77,20 +77,41 @@ Key mappings:
 
 **All images and logos must preserve their natural aspect ratio.** Never set both width and height independently to arbitrary values — this causes visible stretching/squashing.
 
-The charter's `logo.maxWidth` / `logo.maxHeight` define a **bounding box**, not a target size. Fit the image within the box while keeping its proportions:
+The charter's `logo.maxWidth` / `logo.maxHeight` define a **bounding box**, not a target size. Fit the image within the box while keeping its proportions.
+
+### SVG Logos — Always Convert to PNG
+
+**docx-js `ImageRun` cannot embed SVG.** Many charters point to SVG logos. Always resolve to a raster PNG before embedding. The resolution priority:
+
+1. `charter.logo.png` / `charter.logo.whitePng` — pre-generated PNG (preferred, no conversion needed)
+2. Fallback: use `loadLogoBufferForDocx` to convert the SVG in memory via sharp
 
 ```javascript
-const { fitLogoFromCharter } = require('../../../../src/image-utils');
-const dims = await fitLogoFromCharter(logoPath, charter.logo);
-// dims = { width: 39.5, height: 50, unit: 'pt', naturalWidth: 400, naturalHeight: 506 }
+const { loadLogoBufferForDocx } = require('../../../../src/image-utils');
+const path = require('path');
 
-// Use computed dimensions in ImageRun
+const clientDir = path.resolve('client-data/clients/<name>');
+const charterPath = path.join(clientDir, 'charter.json');
+const charter = JSON.parse(fs.readFileSync(charterPath, 'utf-8'));
+
+// Prefer pre-generated PNG fields; fall back to SVG (auto-converted)
+const logoFile = charter.logo.png || charter.logo.primary;
+const logoPath = path.join(clientDir, logoFile);
+
+const logo = await loadLogoBufferForDocx(logoPath, charter.logo);
+// logo = { buffer: Buffer, type: 'png', width: 110, height: 41, unit: 'pt' }
+
 new ImageRun({
-  type: "png",
-  data: fs.readFileSync(logoPath),
-  transformation: { width: dims.width, height: dims.height },
+  type: logo.type,           // always 'png'
+  data: logo.buffer,
+  transformation: { width: logo.width, height: logo.height },
   altText: { title: "Logo", description: "Company logo", name: "logo" }
 })
+
+// White variant on dark backgrounds:
+const whiteFile = charter.logo.whitePng || charter.logo.white;
+const whitePath = path.join(clientDir, whiteFile);
+const whiteLogo = await loadLogoBufferForDocx(whitePath, charter.logo);
 ```
 
 This rule applies to **all images**, not just logos — cover page photos, section images, diagrams, etc. When inserting any image via `ImageRun` or OOXML, always read the actual file dimensions and compute proportional width/height.
@@ -123,7 +144,59 @@ When the charter has an `images` block (`charter.images.catalog`), use brand pho
 
 ### Diagram Integration
 
-When a page would benefit from a process flow, architecture diagram, org chart, timeline, or other structural visual, use the `diagram` skill to generate a branded PNG. The diagram skill reads the same charter and produces images that match brand colors and typography. Embed the resulting PNG using the same image embedding pattern as logos and brand photography.
+**Never use ASCII art, Courier New text boxes, or monospace text for diagrams.** These break alignment across renderers and look unprofessional. Always generate a real diagram PNG.
+
+When a page would benefit from a process flow, architecture diagram, org chart, timeline, or other structural visual, use the `diagram` skill to generate a branded PNG, then embed it using `ImageRun`. The diagram skill reads the same charter and produces images that match brand colors and typography.
+
+**Concrete workflow:**
+
+```bash
+# Step 1 — generate diagram (from the diagram skill)
+node .claude/skills/diagram/scripts/render-diagram.js diagrams/process-flow.excalidraw output/process-flow.png --client stromy --scale 3
+
+# scale 3 = ~300 DPI at typical 6-inch display width — required for print quality
+```
+
+```javascript
+// Step 2 — size for the document body
+// A4 with 2.5 cm margins: usable width = 16 cm = 9072 DXA
+// US Letter with 1" margins: usable width = 9360 DXA
+const BODY_WIDTH_DXA = 9072; // A4
+
+// Read diagram dimensions for aspect-correct height
+const { fitImageInBox } = require('../../../../src/image-utils');
+const dims = await fitImageInBox('output/process-flow.png', BODY_WIDTH_DXA, 99999);
+const aspectHeight = Math.round(dims.height);
+
+// Step 3 — embed
+new Paragraph({
+  children: [new ImageRun({
+    type: 'png',
+    data: fs.readFileSync('output/process-flow.png'),
+    transformation: { width: BODY_WIDTH_DXA, height: aspectHeight },
+    altText: { title: 'Process flow', description: 'Workflow diagram', name: 'diagram' },
+  })],
+  spacing: { before: 160, after: 160 },
+})
+```
+
+**Sizing reference (DXA units):**
+
+| Paper | Margins | Body width (DXA) |
+|-------|---------|-----------------|
+| A4 | 2.5 cm each | 9072 |
+| US Letter | 1 in each | 9360 |
+
+Keep diagram height ≤ 50% of usable page height to avoid orphaned captions. For tall diagrams, split into multiple focused diagrams.
+
+**Alternative: Mermaid via Playwright** — when the diagram skill is not available or the diagram is specified as Mermaid syntax, render it in-browser and screenshot:
+
+1. Write an HTML file with Mermaid CDN + `<pre class="mermaid">` containing the diagram code and brand-colored `style` directives
+2. Navigate Playwright to the HTML (via data URI if file:// is blocked)
+3. Wait for rendering: `document.querySelector('.mermaid svg')` must be truthy
+4. Screenshot the `.mermaid` element to PNG
+5. **Crop whitespace** — Mermaid renders leave large margins. Use `sharp(png).trim({ threshold: 5 })` then `.extend({ top: 30, bottom: 30, left: 30, right: 30, background: white })` to produce a tight crop with minimal padding
+6. Embed the cropped PNG via `ImageRun` with `fitImageInBox` sizing
 
 ### Company identity data
 When a company directory exists, also check for `profile.json` at `client-data/clients/<name>/profile.json`. If present, use company identity fields:
@@ -260,6 +333,31 @@ const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageR
 const doc = new Document({ sections: [{ children: [/* content */] }] });
 Packer.toBuffer(doc).then(buffer => fs.writeFileSync("doc.docx", buffer));
 ```
+
+### Large Document Structure (5+ pages)
+
+For documents with many sections, build content as a flat array and pass it to `sections[0].children`. Define reusable helper functions at the top of the build script to keep the content assembly readable:
+
+```javascript
+// Helper functions — define once, reuse throughout
+function heading(text, level) { /* returns Paragraph with HeadingLevel */ }
+function para(text) { /* returns body Paragraph */ }
+function bullet(text) { /* returns numbered Paragraph */ }
+function calloutBox(title, items) { /* returns Table — see Callout pattern */ }
+function dataTable(headers, rows, colWidths) { /* returns Table */ }
+
+// Content assembly — flat array, one section
+const children = [];
+children.push(heading('1. Introduction'));
+children.push(para('Opening text...'));
+children.push(new Paragraph({ children: [new PageBreak()] }));
+children.push(heading('2. Analysis'));
+// ... continue building
+
+const doc = new Document({ sections: [{ properties: { /* page config */ }, children }] });
+```
+
+**Page break hygiene**: Only insert `PageBreak` when you are certain the preceding content fills most of the page. Inserting a page break after short content (e.g. a heading + one paragraph + a small table) creates a visible empty gap. When in doubt, let content flow naturally and only force breaks before major new sections that should clearly start on a fresh page.
 
 ### Validation
 After creating the file, validate it. If validation fails, unpack, fix the XML, and repack.
@@ -409,6 +507,43 @@ columnWidths: [7000, 2360]  // Must sum to table width
 - Cell `width` must match corresponding `columnWidth`
 - Cell `margins` are internal padding - they reduce content area, not add to cell width
 - For full-width tables: use content width (page width minus left and right margins)
+
+### Callout / Aside Boxes
+
+Use a single-cell table with a thick colored left border and light shading. This is the standard pattern for "Questions for…", "Note", "Important", or any visually distinct aside block.
+
+```javascript
+function calloutBox(title, items, charter) {
+  const accentColor = charter.colors.accent.replace('#', '');
+  const bgColor = charter.colors.backgroundAlt.replace('#', '');
+  const accentBorder = { style: BorderStyle.SINGLE, size: 12, color: accentColor };
+  const noBorder = { style: BorderStyle.NONE };
+
+  // Build children array imperatively — avoid spread inside nested constructors (see Critical Rules)
+  const cellChildren = [
+    new Paragraph({ spacing: { after: 120 }, children: [
+      new TextRun({ text: title, font: "Arial", size: 22, bold: true, color: accentColor })] })
+  ];
+  items.forEach(function(item, i) {
+    cellChildren.push(new Paragraph({ spacing: { after: 80 }, children: [
+      new TextRun({ text: (i + 1) + '. ' + item, font: "Arial", size: 21 })] }));
+  });
+
+  return new Table({
+    width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    columnWidths: [CONTENT_WIDTH],
+    rows: [new TableRow({ children: [new TableCell({
+      borders: { top: noBorder, bottom: noBorder, right: noBorder, left: accentBorder },
+      shading: { fill: bgColor, type: ShadingType.CLEAR },
+      width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+      margins: { top: 160, bottom: 160, left: 200, right: 200 },
+      children: cellChildren,
+    })] })],
+  });
+}
+```
+
+Use `charter.formatting.accentCycleColors` to vary the left-border color when multiple callout boxes appear in one document.
 
 ### Images
 
@@ -582,193 +717,29 @@ sections: [{
 - **TOC requires HeadingLevel only** - no custom styles on heading paragraphs
 - **Override built-in styles** - use exact IDs: "Heading1", "Heading2", etc.
 - **Include `outlineLevel`** - required for TOC (0 for H1, 1 for H2, etc.)
+- **Avoid spread (`...`) inside nested docx-js constructors** - `...items.map(...)` inside a `children` array that is inside `new TableCell({ children: [...] })` can cause cryptic `SyntaxError: missing ) after argument list` at build time. Instead, build the children array imperatively with `forEach` + `.push()`, then pass it to the constructor. See the Callout Box pattern for an example.
+- **No empty pages** — after generation, open the file in LibreOffice/Word and check for blank pages. Common causes: (a) a `PageBreak` after a short section, (b) a `SectionType.NEXT_PAGE` break where the previous section was sparse, (c) a trailing empty Paragraph with `pageBreakBefore: true`. Fix by removing the orphan break or adding content. The `pandoc` text extraction will not catch blank pages — always visually review the output.
+- **SVG logos must be converted** — `ImageRun` does not render SVG. Always use `charter.logo.png` / `charter.logo.whitePng`, or call `loadLogoBufferForDocx()` from `src/image-utils.js` for auto-conversion.
+- **Diagram PNGs need print DPI** — generate diagrams with `--scale 3` (or higher) in the diagram skill render script. At scale 2 (the old default), diagrams look blurry in print output.
 
 ---
 
 ## Editing Existing Documents
 
-**Follow all 3 steps in order.**
+Unpack → edit XML → repack. Full workflow with smart-quote entities, `comment.py` usage, auto-repair behavior, and common pitfalls: **`references/editing-existing-documents.md`**
 
-### Step 1: Unpack
+Quick reference:
 ```bash
-python scripts/office/unpack.py document.docx unpacked/
+python scripts/office/unpack.py document.docx unpacked/   # Step 1: Unpack
+# Step 2: Edit XML in unpacked/word/ using the Edit tool (not scripts)
+python scripts/office/pack.py unpacked/ output.docx --original document.docx  # Step 3: Pack
 ```
-Extracts XML, pretty-prints, merges adjacent runs, and converts smart quotes to XML entities (`&#x201C;` etc.) so they survive editing. Use `--merge-runs false` to skip run merging.
-
-### Step 2: Edit XML
-
-Edit files in `unpacked/word/`. See XML Reference below for patterns.
-
-**Use "Claude" as the author** for tracked changes and comments, unless the user explicitly requests use of a different name.
-
-**Use the Edit tool directly for string replacement. Do not write Python scripts.** Scripts introduce unnecessary complexity. The Edit tool shows exactly what is being replaced.
-
-**CRITICAL: Use smart quotes for new content.** When adding text with apostrophes or quotes, use XML entities to produce smart quotes:
-```xml
-<!-- Use these entities for professional typography -->
-<w:t>Here&#x2019;s a quote: &#x201C;Hello&#x201D;</w:t>
-```
-| Entity | Character |
-|--------|-----------|
-| `&#x2018;` | ' (left single) |
-| `&#x2019;` | ' (right single / apostrophe) |
-| `&#x201C;` | " (left double) |
-| `&#x201D;` | " (right double) |
-
-**Adding comments:** Use `comment.py` to handle boilerplate across multiple XML files (text must be pre-escaped XML):
-```bash
-python scripts/comment.py unpacked/ 0 "Comment text with &amp; and &#x2019;"
-python scripts/comment.py unpacked/ 1 "Reply text" --parent 0  # reply to comment 0
-python scripts/comment.py unpacked/ 0 "Text" --author "Custom Author"  # custom author name
-```
-Then add markers to document.xml (see Comments in XML Reference).
-
-### Step 3: Pack
-```bash
-python scripts/office/pack.py unpacked/ output.docx --original document.docx
-```
-Validates with auto-repair, condenses XML, and creates DOCX. Use `--validate false` to skip.
-
-**Auto-repair will fix:**
-- `durableId` >= 0x7FFFFFFF (regenerates valid ID)
-- Missing `xml:space="preserve"` on `<w:t>` with whitespace
-
-**Auto-repair won't fix:**
-- Malformed XML, invalid element nesting, missing relationships, schema violations
-
-### Common Pitfalls
-
-- **Replace entire `<w:r>` elements**: When adding tracked changes, replace the whole `<w:r>...</w:r>` block with `<w:del>...<w:ins>...` as siblings. Don't inject tracked change tags inside a run.
-- **Preserve `<w:rPr>` formatting**: Copy the original run's `<w:rPr>` block into your tracked change runs to maintain bold, font size, etc.
 
 ---
 
 ## XML Reference
 
-### Schema Compliance
-
-- **Element order in `<w:pPr>`**: `<w:pStyle>`, `<w:numPr>`, `<w:spacing>`, `<w:ind>`, `<w:jc>`, `<w:rPr>` last
-- **Whitespace**: Add `xml:space="preserve"` to `<w:t>` with leading/trailing spaces
-- **RSIDs**: Must be 8-digit hex (e.g., `00AB1234`)
-
-### Tracked Changes
-
-**Insertion:**
-```xml
-<w:ins w:id="1" w:author="Claude" w:date="2025-01-01T00:00:00Z">
-  <w:r><w:t>inserted text</w:t></w:r>
-</w:ins>
-```
-
-**Deletion:**
-```xml
-<w:del w:id="2" w:author="Claude" w:date="2025-01-01T00:00:00Z">
-  <w:r><w:delText>deleted text</w:delText></w:r>
-</w:del>
-```
-
-**Inside `<w:del>`**: Use `<w:delText>` instead of `<w:t>`, and `<w:delInstrText>` instead of `<w:instrText>`.
-
-**Minimal edits** - only mark what changes:
-```xml
-<!-- Change "30 days" to "60 days" -->
-<w:r><w:t>The term is </w:t></w:r>
-<w:del w:id="1" w:author="Claude" w:date="...">
-  <w:r><w:delText>30</w:delText></w:r>
-</w:del>
-<w:ins w:id="2" w:author="Claude" w:date="...">
-  <w:r><w:t>60</w:t></w:r>
-</w:ins>
-<w:r><w:t> days.</w:t></w:r>
-```
-
-**Deleting entire paragraphs/list items** - when removing ALL content from a paragraph, also mark the paragraph mark as deleted so it merges with the next paragraph. Add `<w:del/>` inside `<w:pPr><w:rPr>`:
-```xml
-<w:p>
-  <w:pPr>
-    <w:numPr>...</w:numPr>  <!-- list numbering if present -->
-    <w:rPr>
-      <w:del w:id="1" w:author="Claude" w:date="2025-01-01T00:00:00Z"/>
-    </w:rPr>
-  </w:pPr>
-  <w:del w:id="2" w:author="Claude" w:date="2025-01-01T00:00:00Z">
-    <w:r><w:delText>Entire paragraph content being deleted...</w:delText></w:r>
-  </w:del>
-</w:p>
-```
-Without the `<w:del/>` in `<w:pPr><w:rPr>`, accepting changes leaves an empty paragraph/list item.
-
-**Rejecting another author's insertion** - nest deletion inside their insertion:
-```xml
-<w:ins w:author="Jane" w:id="5">
-  <w:del w:author="Claude" w:id="10">
-    <w:r><w:delText>their inserted text</w:delText></w:r>
-  </w:del>
-</w:ins>
-```
-
-**Restoring another author's deletion** - add insertion after (don't modify their deletion):
-```xml
-<w:del w:author="Jane" w:id="5">
-  <w:r><w:delText>deleted text</w:delText></w:r>
-</w:del>
-<w:ins w:author="Claude" w:id="10">
-  <w:r><w:t>deleted text</w:t></w:r>
-</w:ins>
-```
-
-### Comments
-
-After running `comment.py` (see Step 2), add markers to document.xml. For replies, use `--parent` flag and nest markers inside the parent's.
-
-**CRITICAL: `<w:commentRangeStart>` and `<w:commentRangeEnd>` are siblings of `<w:r>`, never inside `<w:r>`.**
-
-```xml
-<!-- Comment markers are direct children of w:p, never inside w:r -->
-<w:commentRangeStart w:id="0"/>
-<w:del w:id="1" w:author="Claude" w:date="2025-01-01T00:00:00Z">
-  <w:r><w:delText>deleted</w:delText></w:r>
-</w:del>
-<w:r><w:t> more text</w:t></w:r>
-<w:commentRangeEnd w:id="0"/>
-<w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="0"/></w:r>
-
-<!-- Comment 0 with reply 1 nested inside -->
-<w:commentRangeStart w:id="0"/>
-  <w:commentRangeStart w:id="1"/>
-  <w:r><w:t>text</w:t></w:r>
-  <w:commentRangeEnd w:id="1"/>
-<w:commentRangeEnd w:id="0"/>
-<w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="0"/></w:r>
-<w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="1"/></w:r>
-```
-
-### Images
-
-1. Add image file to `word/media/`
-2. Add relationship to `word/_rels/document.xml.rels`:
-```xml
-<Relationship Id="rId5" Type=".../image" Target="media/image1.png"/>
-```
-3. Add content type to `[Content_Types].xml`:
-```xml
-<Default Extension="png" ContentType="image/png"/>
-```
-4. Reference in document.xml:
-```xml
-<w:drawing>
-  <wp:inline>
-    <wp:extent cx="914400" cy="914400"/>  <!-- EMUs: 914400 = 1 inch -->
-    <a:graphic>
-      <a:graphicData uri=".../picture">
-        <pic:pic>
-          <pic:blipFill><a:blip r:embed="rId5"/></pic:blipFill>
-        </pic:pic>
-      </a:graphicData>
-    </a:graphic>
-  </wp:inline>
-</w:drawing>
-```
+Schema compliance rules, tracked changes (insert/delete/nested), comment markers, and OOXML image embedding: **`references/xml-reference.md`**
 
 ## Code Style Guidelines
 **IMPORTANT**: When generating code for DOCX operations:
