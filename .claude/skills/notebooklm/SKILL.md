@@ -119,7 +119,8 @@ workspace/<client>/output/<deliverable>/
 Use `src/workspace.py` for output path resolution when building from `workspace/<client>/build/<deliverable>/`.
 
 **Override**: If the prompt specifies a target output directory, use that path directly.
-**Discovery**: Before creating new output, check the project's `output/` folder for existing deliverables. Briefly mention what you find, then proceed.
+
+
 
 ### Step 7: Post-Process (Optional)
 

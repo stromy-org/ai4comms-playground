@@ -11,7 +11,8 @@ Create animated videos using [Remotion](https://www.remotion.dev/) with optional
 
 **Default**: `<projectRoot>/out/` — Remotion convention, triggered by `.remotion-project` marker.
 **Override**: If the prompt specifies a target output directory, use that path for the render `--output` flag.
-**Discovery**: Before creating new output, check the project's `out/` folder for existing renders. Briefly mention what you find, then proceed with the current task. Do NOT modify existing files unless explicitly asked.
+
+
 
 ## When to Use
 

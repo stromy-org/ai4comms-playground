@@ -393,7 +393,8 @@ workspace/<client>/output/paid-social-campaign/
 ```
 
 **Override**: If the prompt specifies a target output directory, use it.
-**Discovery**: Before creating new output, check the project's `output/` folder for existing deliverables. Briefly mention what you find, then proceed with the current task.
+
+
 
 ## Error Handling
 

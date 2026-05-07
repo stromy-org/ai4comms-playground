@@ -262,7 +262,8 @@ When a template is found, use the OOXML editing workflow: copy template → unpa
 
 **Default**: `<projectRoot>/output/<deliverable>/` — auto-detected from build script location using `src/workspace.js`.
 **Override**: If the prompt specifies a target output directory, pass it as `{ outputDir: '<path>' }`.
-**Discovery**: Before creating new output, check the project's `output/` folder for existing deliverables. Briefly mention what you find, then proceed with the current task. Do NOT modify existing files unless explicitly asked.
+
+
 **Iteration**: When asked to edit/rework an existing file, work on it in place (overwrite). Unpack to `build/<deliverable>/unpacked/`.
 
 ### Build script output setup

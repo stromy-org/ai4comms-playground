@@ -124,7 +124,8 @@ No brands currently have xlsx templates — this convention is documented for fu
 
 **Default**: `<projectRoot>/output/<deliverable>/` — auto-detected from build script location.
 **Override**: If the prompt specifies a target output directory, use that path instead.
-**Discovery**: Before creating new output, check the project's `output/` folder for existing deliverables. Briefly mention what you find, then proceed with the current task. Do NOT modify existing files unless explicitly asked.
+
+
 **Iteration**: When asked to edit/rework an existing file, work on it in place (overwrite).
 
 ### Python build script output setup
