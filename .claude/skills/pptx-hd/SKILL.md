@@ -104,7 +104,7 @@ The brand image catalog (`charter.images.catalog` + `manifest.json`) provides a 
 3. Use `description` for topical relevance — match image mood to slide content
 4. Track used images in a `Set` to avoid repetition on consecutive image slides
 5. When all images for a role are exhausted, reset and reuse
-6. Use pre-cropped hero versions from `images/heroes/` when available (prefer `hero-16x9` for 16:9 slides)
+6. **Always use original source images** from `images/` and crop at build time with Sharp (center-crop to 16:9, resize to 1920×1080). Do NOT use pre-cropped images from `images/slides/` or `images/heroes/` — these subdirectories may contain corrupted assets (tiled/repeated images with black bands). The Sharp crop approach is reliable and produces consistent results regardless of source aspect ratio.
 
 **Overlay compositing:**
 - Read `overlayPolicy` from manifest (e.g., `"dark-52"` → 52% opacity primary color overlay)
@@ -281,9 +281,34 @@ Borrowed from the upstream Anthropic skill + our experience:
 - **NEVER** default to blue when a brand palette exists
 - **NEVER** hardcode hex values — use CSS variables from tokens.css
 - **NEVER** use the same image on consecutive image slides
-- **NEVER** set both width AND height on images — preserve aspect ratio
+- **NEVER** set both width AND height on images — preserve aspect ratio. For logos: read the image file to get its natural pixel dimensions, compute the aspect ratio (w/h), then set only ONE dimension (typically height for header/footer logos) and derive the other. Example PptxGenJS: `const img = sharp(logoPath); const {width, height} = await img.metadata(); const ratio = width/height; slide.addImage({path: logoPath, h: 0.55, w: 0.55 * ratio, ...})`. The charter.json `logo.maxWidth`/`logo.maxHeight` are upper bounds, not target dimensions.
 - **NEVER** place text outside the image's `textSafeZone`
 - **NEVER** skip the overlay on image slides — raw photos are too bright for text legibility
+- **NEVER** use pre-cropped images from `images/slides/` or `images/heroes/` subdirectories without visually verifying them first — these may contain corrupted assets. Always prefer using the original source images from `images/` with Sharp center-crop at build time:
+```javascript
+async function cropTo16x9(srcPath, outPath) {
+  const meta = await sharp(srcPath).metadata();
+  const targetRatio = 16 / 9;
+  const srcRatio = meta.width / meta.height;
+  let cropW, cropH, left, top;
+  if (srcRatio > targetRatio) {
+    cropH = meta.height;
+    cropW = Math.round(meta.height * targetRatio);
+    left = Math.round((meta.width - cropW) / 2);
+    top = 0;
+  } else {
+    cropW = meta.width;
+    cropH = Math.round(meta.width / targetRatio);
+    left = 0;
+    top = Math.round((meta.height - cropH) / 2);
+  }
+  await sharp(srcPath)
+    .extract({ left, top, width: cropW, height: cropH })
+    .resize(1920, 1080)
+    .jpeg({ quality: 90 })
+    .toFile(outPath);
+}
+```
 
 ## Dependencies
 
