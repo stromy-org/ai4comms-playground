@@ -10,6 +10,21 @@ license: Proprietary. LICENSE.txt has complete terms
 
 This guide covers essential PDF processing operations using Python libraries and command-line tools. For advanced features, JavaScript libraries, and detailed examples, see reference.md. If you need to fill out a PDF form, read forms.md and follow its instructions.
 
+## Branded design work? → use `pdf-hd`
+
+This `pdf` skill is for: **form-filling, reading/extracting, merging/splitting, OCR, data-heavy programmatic PDFs (financial tables, batch reports), and unbranded fast generation**. For client-facing branded proposals, briefs, brand books, case studies, or policy reports, the `pdf-hd` skill produces higher fidelity via HTML→PDF (Playwright/Chromium or WeasyPrint) — real brand fonts via `@font-face`, CSS gradients, full design tokens, hero crops, and page shells from `templates/pdf/`.
+
+| Need | Skill |
+|---|---|
+| Fill a PDF form | `pdf` (this) |
+| Read text / extract tables | `pdf` (this) |
+| Merge / split / rotate | `pdf` (this) |
+| Batch report, financial table dump | `pdf` (this) |
+| Unbranded quick PDF | `pdf` (this) |
+| Branded proposal / brief / brand book | `pdf-hd` |
+| Magazine-style branded deliverable | `pdf-hd` |
+| Cover page with real brand font + hero image | `pdf-hd` |
+
 > **Logo & Image Sizing**: Never hardcode both width and height. Use `src/image-utils.js` (Node) or `src/image_utils.py` (Python) to compute aspect-ratio-preserving dimensions from the charter bounding box.
 
 ## Brand Data Integration
@@ -24,6 +39,14 @@ Look for a charter file at `client-data/clients/<name>/charter.json` where `<nam
 - **Logo**: filename(s) in the same `brand/` directory (e.g. `logo.png`, `logo_white.png`) with max dimensions and `"sizing": "contain"` — the logo must fit within the `maxWidth`/`maxHeight` bounding box while preserving its natural aspect ratio (never stretch or squash)
 - **Document settings**: `document.margins` (top/bottom/left/right), `document.header`, `document.footer`, `document.headingColor`, `document.tableHeaderColor`
 - **Formatting rules**: `formatting.headingThreshold`, `formatting.accentCycleColors`, `formatting.autoContrastText`
+
+Also check (when present) these companion artifacts in the same brand directory:
+
+- **`guidelines.md`** — written brand rules (voice, tone, do's and don'ts). Read before designing — it constrains color/imagery/voice choices that the charter alone can't express.
+- **`images/manifest.json`** — extended per-image metadata (roles, overlayPolicy, textSafeZone, motifAffinity, pre-cropped formats). Prefer this over guessing roles from filenames.
+- **`images/heroes/`** — pre-cropped hero images in `hero-2x1`, `hero-16x9`, and `hero` formats. **For cover and divider pages, use these directly** rather than runtime Pillow compositing. Cheaper, faster, and matches the assets `pptx-hd` already consumes.
+- **`brand/fonts/`** (optional) — TTF/OTF files when the charter wants real brand fonts in the output. If present, register via `pdfmetrics.registerFont` (see "Charter font embedding" below) instead of using the web-safe fallback.
+- **`templates/pdf/`** (optional) — HTML page shells. Not used by this reportlab-based skill; the `pdf-hd` skill consumes them.
 
 ### Applying brand data in reportlab
 
@@ -128,6 +151,27 @@ When the charter has an `images` block (`charter.images.catalog`), use brand pho
 **Logo on image pages**: Use `charter.images.logoVariantOnImage` (e.g. `"white"`) to resolve the white logo variant for dark photo backgrounds.
 
 **Fallback**: When no `charter.images` block exists, skip brand photography and use solid-color headers/accents only.
+
+**Prefer pre-cropped heroes over runtime compositing**: when `images/heroes/<name>.hero-2x1.jpg` (or `hero-16x9`) exists, use it directly with `canvas.drawImage()` instead of reading the original and compositing an overlay at build time. The pre-cropped assets are already sized to common page-region aspect ratios. Only fall back to Pillow `Image.blend()` when no hero crop exists for the image you want.
+
+### Charter font embedding (when `brand/fonts/` exists)
+
+If the brand directory has a `brand/fonts/` subdirectory with TTF/OTF files, register them so the real brand font renders in the PDF instead of the web-safe fallback:
+
+```python
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+fonts_dir = brand_dir / 'fonts'
+if fonts_dir.exists():
+    for weight, filename in [('Regular', 'Fraunces-Regular.ttf'), ('Bold', 'Fraunces-Bold.ttf')]:
+        font_path = fonts_dir / filename
+        if font_path.exists():
+            pdfmetrics.registerFont(TTFont(f'Fraunces-{weight}', str(font_path)))
+    # Now 'Fraunces-Regular' / 'Fraunces-Bold' are valid fontName values
+```
+
+If `brand/fonts/` doesn't exist, fall through to the existing charter.fonts.heading.fallback (web-safe) — reportlab cannot resolve Google Fonts at render time. For real brand fonts in PDFs without `brand/fonts/`, use the `pdf-hd` skill instead (it supports `@font-face` via Google Fonts URLs natively).
 
 ### Diagram Integration
 
