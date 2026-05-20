@@ -1,6 +1,6 @@
 ---
 name: pptx
-description: "Presentation creation, editing, and analysis. When Claude needs to work with presentations (.pptx files) for: (1) Creating new presentations, (2) Modifying or editing content, (3) Working with layouts, (4) Adding comments or speaker notes, or any other presentation tasks"
+description: "DEFAULT PPTX skill — presentation creation, editing, analysis. Use for any .pptx work that isn't an explicit high-stakes/premium/HD pitch deck (which goes to `pptx-hd`). Handles: (1) creating new presentations, (2) modifying/editing content, (3) working with layouts, (4) adding comments/speaker notes, (5) analysing existing decks. Consumes brand data from charter.json + tokens.css + boilerplate.json + templates/pptx/ HTML shells when present. Also supports `render-anchors` mode (materialises brand anchor templates from spec files)."
 license: Proprietary. LICENSE.txt has complete terms
 ---
 
@@ -333,6 +333,49 @@ Example for specific range:
 ```bash
 pdftoppm -jpeg -r 150 -f 2 -l 5 template.pdf slide  # Converts only pages 2-5
 ```
+
+## Boilerplate consumption (footer, confidentiality, watermark)
+
+When generating any branded deck, read `client-data/clients/<slug>/boilerplate.json` if present. This file owns the strings that must be consistent across every deck/doc/PDF for the client.
+
+Substitute Mustache-style placeholders at render time:
+- `{{client.name}}` — from `profile.json` company.name (fall back to `charter.meta.displayName`).
+- `{{document.title}}` — from the deck's own title.
+- `{{date}}`, `{{year}}` — current date (per dev-patterns: never hardcode).
+- `{{page}}`, `{{pages}}` — slide indices.
+- `{{confidentiality.deck}}` / `{{confidentiality.doc}}` / etc. — from `boilerplate.confidentiality.*`.
+
+Default footer comes from `boilerplate.footer.deck`. Apply via the existing `brandedSlide()` helper or directly in slide HTML. Never invent custom footer text when `boilerplate.json` is present.
+
+## Vertical (9:16) mode
+
+When the user asks for a vertical / mobile / 9:16 deck — or when the engagement targets executive mobile reads — render at 405pt × 720pt instead of 720pt × 405pt. The full brand pipeline still applies; only the canvas dimensions change. Pass `--vertical` to the build script or set `pptx.defineLayout({ name: 'V169', width: 405/72, height: 720/72 })`. Charter must declare `presentation.aspectRatios` includes `"9:16"`.
+
+## `render-anchors` mode
+
+When the user (or brand-builder hand-off) requests rendering the anchor templates for a client:
+
+```bash
+node .claude/skills/pptx/scripts/render-anchors.js --client <slug>
+```
+
+This mode:
+1. Reads `client-data/clients/<slug>/templates/pptx/*.html` page shells (cover, section-divider, content, closing, footer-bar).
+2. Reads `boilerplate.json`, `charter.json`, `tokens.css`, and resolves logo/image asset paths.
+3. Substitutes placeholders, renders each shell via Playwright at 1280×720, converts to slides via `html2pptx`.
+4. Writes `client-data/clients/<slug>/templates/pptx/anchors.pptx` — a 4-slide anchor file (cover, divider, content-with-footer, closing).
+
+The anchor PPTX is **not a deck template** — it's a brand-consistency reference. Live decks copy the footer bar / divider treatment / cover frame; slide bodies remain LLM-creative.
+
+## Programmatic QA gates
+
+Run after every build, alongside the existing thumbnail loop:
+
+1. **Text overflow** — for each text frame, compare PptxGenJS placement bounds against the source HTML's measured bounding box (Playwright `getBoundingClientRect`). Warn if rendered text exceeds its frame.
+2. **WCAG AA contrast** — for each title/body text run, compute contrast ratio of foreground vs background fill (skip when background is an image — manifest's `overlayPolicy` already enforces overlay). Fail at < 4.5:1 for body, < 3:1 for large titles (≥ 24pt).
+3. **Image dpi** — for each embedded raster, warn if natural dimensions divided by placement size gives < 96 dpi.
+
+A reference implementation lives at `scripts/qa-gates.js`; build scripts should require and call it before final write.
 
 ## Code Style Guidelines
 **IMPORTANT**: When generating code for PPTX operations:

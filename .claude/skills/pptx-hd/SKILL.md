@@ -1,6 +1,6 @@
 ---
 name: pptx-hd
-description: "High-fidelity branded presentation creation using HTML-first design with full web stack (CSS gradients, web fonts, SVG, animations) and enhanced HTML→PPTX conversion via dom-to-pptx. Deeply integrated with client-data brand system (charter.json, tokens.css, manifest.json, hero images). Use when asked to create presentations, slide decks, pitch decks, or any branded .pptx output where visual quality matters. Triggers on: 'create presentation', 'build slide deck', 'make pptx', 'branded slides', 'pitch deck', 'HD slides', 'high quality presentation', or any request for visually polished branded presentations."
+description: "High-fidelity branded presentation creation for high-stakes decks (pitch, investor, executive, client-facing premium). HTML-first design with full web stack (CSS gradients, web fonts, SVG, shadows, layered depth) and enhanced HTML→PPTX conversion. Deeply integrated with client-data brand system (charter.json, tokens.css, manifest.json, hero images, boilerplate.json, anchor templates in templates/pptx/). Also supports `render-anchors` mode that materialises brand anchor templates from spec files. TRIGGER ONLY on explicit HD/premium/pitch cues — 'HD pitch deck', 'high-fidelity presentation', 'investor deck', 'branded premium deck', 'render anchor templates'. For ordinary PPTX work (most decks), the standard `pptx` skill is the default — do not trigger on bare 'create presentation' or 'make pptx'."
 ---
 
 # PPTX-HD: High-Fidelity Branded Presentations
@@ -316,6 +316,62 @@ async function cropTo16x9(srcPath, outPath) {
 - **Playwright**: `npm install playwright` — HTML rendering and DOM measurement
 - **Sharp**: `npm install sharp` — image processing for fallback rasterization
 - **Standard pptx skill tools**: Reuses `ooxml/scripts/`, `scripts/thumbnail.py` from the sibling `pptx` skill
+
+## Boilerplate consumption (footer, confidentiality, watermark)
+
+Every HD deck reads `client-data/clients/<slug>/boilerplate.json`. It owns the strings that must be consistent across all client deliverables — never reinvent them inline.
+
+Substitute Mustache-style placeholders at render time:
+- `{{client.name}}` from profile.json / charter.meta.displayName.
+- `{{date}}`, `{{year}}` from `new Date()` (never hardcode).
+- `{{page}}` / `{{pages}}` from slide indices.
+- `{{confidentiality.deck}}` / `{{confidentiality.doc}}` from `boilerplate.confidentiality.*`.
+
+The HD footer bar reads from `boilerplate.footer.deck`; the watermark (when in draft mode) from `boilerplate.watermark.draft`; the closing slide's copyright line from `boilerplate.legal.copyright`. Every content slide must apply the brand footer bar — copy the markup from `templates/pptx/footer-bar.html` (or inherit it from the rendered `anchors.pptx`).
+
+## Anchor templates — what they encode, what they don't
+
+When `client-data/clients/<slug>/templates/pptx/*.html` exists, those are the brand's **anchor templates**: cover, section-divider, content (frame only), closing, footer-bar. They encode the brand-consistent visible frame (cover hero treatment, divider style, footer bar, page-number position).
+
+They do NOT encode slide-body layout. The HD deck's job is to compose creative layouts inside the safe zone (`charter.presentation.safeMargins`), while inheriting the cover, divider, and footer frames from the anchors.
+
+## Vertical (9:16) mode
+
+When the deck is intended for mobile executive reads (or the user asks for vertical / 9:16), render at 720px × 1280px instead of 1280px × 720px. All anchor shells already use `var(--…)` and `position:absolute`, so vertical mode largely works by swapping width/height — but visually verify cover and divider compositions, and re-pick hero crops to portrait where the manifest provides them.
+
+Charter must declare `presentation.aspectRatios` includes `"9:16"` for this to be a supported mode for the client.
+
+## `render-anchors` mode
+
+When the user (or brand-builder Phase 5 hand-off) requests anchor materialisation for a client:
+
+```bash
+node .claude/skills/pptx-hd/scripts/render-anchors.js --client <slug>
+```
+
+This mode:
+1. Reads `client-data/clients/<slug>/templates/pptx/*.html` shells.
+2. Reads `boilerplate.json`, `charter.json`, `tokens.css`, resolves logo and hero image paths.
+3. Substitutes placeholders, renders each shell via Playwright at 1280×720 (and 720×1280 if vertical is declared).
+4. Converts each rendered slide via the HD html2pptx pipeline.
+5. Writes `client-data/clients/<slug>/templates/pptx/anchors.pptx` (and `anchors-vertical.pptx` if applicable).
+
+Anchor files are the **reference for brand consistency**, not a deck template — live decks reuse the frame (footer, cover, divider) but compose bodies fresh.
+
+## Programmatic QA gates
+
+Run before final write, alongside the thumbnail QA loop:
+
+1. **Text overflow** — for each text element, compare measured DOM bounding box (`getBoundingClientRect`) against the slide canvas. Warn if any text frame exceeds the safe zone.
+2. **WCAG AA contrast** — for each title/body text run, compute contrast ratio of foreground vs the underlying fill (skip if background is image; manifest's `overlayPolicy` is the contract for image slides). Fail at < 4.5:1 for body, < 3:1 for ≥24pt headers.
+3. **Image dpi** — warn if any embedded raster's natural pixels / placement size < 96 dpi.
+4. **Brand-data usage report** — list which `charter.*` keys, `tokens.css` variables, and manifest images were actually consumed. Flag any hardcoded hex/rgb literals found in slide HTML (suggests drift from brand tokens).
+
+A reference implementation lives at `scripts/qa-gates-hd.js`; the build script must call it before `pptx.writeFile()`.
+
+## Converter truth-in-advertising
+
+The SKILL.md describes a DOM-to-PPTX pipeline that preserves gradients as vector fills, CSS shadows as PPTX shadow properties, and `border-radius` as rounded corners. The converter at `scripts/html2pptx-hd.js` is the authoritative truth. When in doubt, read it and verify what it actually handles. If a claim above fails to match the converter's behaviour, fix the converter — or downgrade the claim — rather than silently letting users believe the deck is what they think it is.
 
 ## Output Location
 

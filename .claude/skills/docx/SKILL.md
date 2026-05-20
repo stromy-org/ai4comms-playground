@@ -174,3 +174,13 @@ When generating code for DOCX operations:
 - **docx**: `npm install -g docx` (new documents)
 - **LibreOffice**: PDF conversion (auto-configured for sandboxed environments via `scripts/office/soffice.py`)
 - **Poppler**: `pdftoppm` for images
+
+## `render-anchors` mode (brand-builder hand-off)
+
+When the user (or brand-builder Phase 5 hand-off) requests anchor materialisation for a client:
+
+```bash
+node .claude/skills/docx/scripts/render-anchors.js --client <slug>
+```
+
+Reads `client-data/clients/<slug>/templates/docx/` style shells, `charter.json`, and `boilerplate.json`. Produces `templates/docx/anchors.docx` — a style-only reference document encoding the brand-consistent header, footer (from `boilerplate.footer.doc`), heading styles, cover-page layout, and watermark config. Live documents copy these styles via the Pandoc `reference.docx` pattern; the anchor is the brand-consistency reference, not a content shell.

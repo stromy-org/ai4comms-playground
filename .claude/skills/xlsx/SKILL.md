@@ -358,3 +358,14 @@ The script returns JSON with error details:
 - Add comments to cells with complex formulas or important assumptions
 - Document data sources for hardcoded values
 - Include notes for key calculations and model sections
+## `render-anchors` mode (brand-builder hand-off)
+
+When the user (or brand-builder Phase 5 hand-off) requests anchor materialisation for a client:
+
+```bash
+python .claude/skills/xlsx/scripts/render_anchors.py --client <slug>
+```
+
+Reads `client-data/clients/<slug>/templates/xlsx/template.spec.json` (if present), `charter.json`, and `boilerplate.json`. Produces `templates/xlsx/anchors.xlsx` — a brand style template encoding: named styles (Heading 1/2/3, Body, Caption), default fonts from `charter.fonts`, header band tinted with `charter.colors.primary`, footer row referencing `boilerplate.footer.doc`, and default number/date formats. Live workbooks reuse these named styles to stay on-brand.
+
+If the spec file is absent, generate a minimal default spec from charter values before rendering — the spec is optional but a brand-specific spec lets the user tune number formats and header band height.
