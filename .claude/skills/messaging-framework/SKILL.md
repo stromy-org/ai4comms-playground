@@ -5,6 +5,12 @@ description: "Build structured messaging frameworks — core narrative, messagin
 
 # Messaging Framework
 
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/profile.json` — company positioning + audiences
+- `companies/{client_slug}/messaging/` (optional) — prior frameworks for context
+
 ## Overview
 
 This skill builds structured messaging frameworks — the strategic bridge between positioning and execution. A messaging framework organizes an organization's core claims, supporting evidence, and audience-specific language into a reusable system that teams can actually pull from when writing copy, preparing spokespeople, briefing agencies, or planning campaigns.

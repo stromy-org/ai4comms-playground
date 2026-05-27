@@ -6,6 +6,26 @@ license: Proprietary. LICENSE.txt has complete terms
 
 # Consulting Proposal Builder
 
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/profile.json` — company name, services, regions
+- `companies/{client_slug}/proposals/methodologies.json` (optional) — methodology library
+- `companies/{client_slug}/boilerplate.json` (optional) — boilerplate sections
+
+## Canvas protocol (prerequisite)
+
+This skill produces a structured deliverable — it MUST use the deliverable canvas (see the [`deliverable-canvas`](../deliverable-canvas/SKILL.md) skill for the full protocol). The canvas is the source of truth for the in-progress proposal; chat scroll-back is not.
+
+**Required tool sequence:**
+
+1. **Resume or create.** First call `mcp__deliverable-canvas__canvas_list(client_id=<client_slug>, deliverable_type="proposal")`. If candidates exist, ask the user whether to resume a prior canvas; if yes, call `canvas_get(canvas_id)`. Otherwise call `canvas_create(deliverable_type="proposal", client_id=<client_slug>, title=<short>, template_id="proposal_v1", brief=<one-paragraph engagement summary>, opened_by_skill="proposal", methodology_version=<if known>)`.
+2. **Render the artifact.** Read `canvas://<canvas_id>/artifact` and emit it as an HTML artifact so the user sees the canvas alongside chat.
+3. **Per turn.** When the user instructs a section change ("make pricing more aggressive"), call `canvas_update_section(canvas_id, section_id=<one of: context, approach, scope, timeline, pricing, risks, next_steps>, body=<new full body>, summary=<one-line note>, instructed_by_user=True)`. For agent-initiated cleanups, set `instructed_by_user=False`. Re-emit the artifact after each write.
+4. **Finalize before formatter handoff.** Call `canvas_finalize(canvas_id)`. Then hand `canvas_id` to the formatter (`pptx`, `docx`, `pdf`) — the formatter calls `canvas_get` itself.
+
+**Failure mode.** If the canvas MCP is unreachable, surface the error and ask the user: (a) wait, or (b) draft inline without persistence. Never silently degrade.
+
 ## Overview
 
 This skill produces polished consulting proposals, executive briefs, capability statements, and bid documents. It is **format-agnostic** — it owns the proposal domain logic (structure, content strategy, quality gates) and delegates formatting to output skills.

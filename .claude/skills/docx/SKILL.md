@@ -3,10 +3,17 @@ name: docx
 description: "Create, read, edit, and manipulate Word documents (.docx files). Triggers on any mention of 'Word doc', 'word document', '.docx', or requests to produce documents with formatting like tables of contents, headings, page numbers, headers/footers, or letterheads. Also use when extracting or reorganizing content from .docx files, inserting or replacing images, performing find-and-replace, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a 'report', 'memo', 'letter', 'brief', or 'template' as a Word file, use this skill. Reads brand data from `client-data/clients/<name>/charter.json` when a company is specified. Do NOT use for PDFs (use the `pdf` skill), spreadsheets (use `xlsx`), Google Docs, or coding tasks unrelated to document generation."
 license: Proprietary. LICENSE.txt has complete terms
 ---
+> **Promoted to:** MCPs/stromy-format-mcp/skills/docx/ 
+> Cowork retains a read-only copy for offline experimentation. Edit the canonical SKILL.md in the format-mcp repo.
 
 # DOCX creation, editing, and analysis
 
-A .docx file is a ZIP archive containing XML files. This skill covers three workflows: **reading/extracting** content, **creating new documents** via `docx-js`, and **editing existing documents** via OOXML unpack/edit/repack.
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand colours, fonts, logo
+- `companies/{client_slug}/boilerplate.json` (optional) — letterhead / email-sig text
+- `companies/{client_slug}/templates/docx/` (optional) — branded Word template shells
+- `companies/{client_slug}/brand/templates/` (optional) — binary letterhead / business-card templates
 
 ## Workflow checklist
 

@@ -3,8 +3,17 @@ name: xlsx
 description: "Comprehensive spreadsheet creation, editing, and analysis with support for formulas, formatting, data analysis, and visualization. When Claude needs to work with spreadsheets (.xlsx, .xlsm, .csv, .tsv, etc) for: (1) Creating new spreadsheets with formulas and formatting, (2) Reading or analyzing data, (3) Modify existing spreadsheets while preserving formulas, (4) Data analysis and visualization in spreadsheets, or (5) Recalculating formulas"
 license: Proprietary. LICENSE.txt has complete terms
 ---
+> **Promoted to:** MCPs/stromy-format-mcp/skills/xlsx/ 
+> Cowork retains a read-only copy for offline experimentation. Edit the canonical SKILL.md in the format-mcp repo.
 
 # Requirements for Outputs
+
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand colours, fonts
+- `companies/{client_slug}/boilerplate.json` (optional) — company name, footer
+- `companies/{client_slug}/templates/xlsx/template.spec.json` (optional) — branded XLSX template spec
+- `companies/{client_slug}/brand/templates/` (optional) — binary XLSX template files
 
 ## All Excel files
 

@@ -5,6 +5,11 @@ description: "Build paid B2B social media campaigns — campaign briefs, audienc
 
 # Paid Social Campaign
 
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/profile.json` — company positioning + audiences
+
 ## Overview
 
 This skill builds paid B2B social media campaigns as an experimental system — structured targeting, controlled reach, measurable demand capture. Paid social in B2B does three jobs: prospecting at scale with precision, account-based prioritization, and demand capture with clean measurement.

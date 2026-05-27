@@ -5,7 +5,9 @@ description: Run the full quality suite (Python linting, skill validation, compa
 
 # Quality Check
 
-Run the ClaudeCowork quality suite and report findings with structured categorization.
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` (optional) — for tier validation across plugins
 
 ## When to Use
 

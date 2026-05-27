@@ -2,10 +2,23 @@
 name: pptx-hd
 description: "High-fidelity branded presentation creation for high-stakes decks (pitch, investor, executive, client-facing premium). HTML-first design with full web stack (CSS gradients, web fonts, SVG, shadows, layered depth) and enhanced HTML→PPTX conversion. Deeply integrated with client-data brand system (charter.json, tokens.css, manifest.json, hero images, boilerplate.json, anchor templates in templates/pptx/). Also supports `render-anchors` mode that materialises brand anchor templates from spec files. TRIGGER ONLY on explicit HD/premium/pitch cues — 'HD pitch deck', 'high-fidelity presentation', 'investor deck', 'branded premium deck', 'render anchor templates'. For ordinary PPTX work (most decks), the standard `pptx` skill is the default — do not trigger on bare 'create presentation' or 'make pptx'."
 ---
+> **Promoted to:** MCPs/stromy-format-mcp/skills/pptx-hd/ 
+> Cowork retains a read-only copy for offline experimentation. Edit the canonical SKILL.md in the format-mcp repo.
 
 # PPTX-HD: High-Fidelity Branded Presentations
 
-HTML-first slide design with full web rendering quality, converted to editable native PowerPoint via enhanced DOM-to-PPTX pipeline. Deeply integrated with the `client-data` brand system.
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand colours, fonts, logo, spacing, formatting rules
+- `companies/{client_slug}/tokens.css` (optional) — CSS variables for high-fidelity HTML→PPTX
+- `companies/{client_slug}/boilerplate.json` (optional) — company name, tagline, footer text
+- `companies/{client_slug}/guidelines.md` (optional) — brand voice and visual guidelines
+- `companies/{client_slug}/manifest.json` (optional) — image library index
+- `companies/{client_slug}/templates/pptx/` (optional) — branded slide template shells + anchor templates
+- `companies/{client_slug}/brand/` (optional) — logo files + custom font files
+- `companies/{client_slug}/images/heroes/` (optional) — hero images for cover/section slides
+- `companies/{client_slug}/images/processed/` (optional) — pre-processed brand-tinted images
+- `companies/{client_slug}/images/slides/` (optional) — per-slide image library
 
 ## Why This Skill Exists
 

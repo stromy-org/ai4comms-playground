@@ -5,6 +5,12 @@ description: "Write and manage corporate press releases with full governance lif
 
 # Corporate Press Release
 
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/profile.json` — company name, HQ, spokespeople
+- `companies/{client_slug}/press-releases/` (optional) — prior press releases for tone alignment
+
 ## Overview
 
 This skill produces corporate press releases that are simultaneously newsworthy, journalist-friendly, factually rigorous, digitally discoverable, and legally reviewed for disclosure risk. It owns the full lifecycle — from deciding whether an announcement merits a release through drafting, approval, distribution planning, and post-publication corrections.

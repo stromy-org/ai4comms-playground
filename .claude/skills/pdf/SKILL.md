@@ -3,8 +3,22 @@ name: pdf
 description: Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms. When Claude needs to fill in a PDF form or programmatically process, generate, or analyze PDF documents at scale.
 license: Proprietary. LICENSE.txt has complete terms
 ---
+> **Promoted to:** MCPs/stromy-format-mcp/skills/pdf/ 
+> Cowork retains a read-only copy for offline experimentation. Edit the canonical SKILL.md in the format-mcp repo.
 
 # PDF Processing Guide
+
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand colours, fonts, logo
+- `companies/{client_slug}/brand/` (optional) — logo files referenced by charter
+- `companies/{client_slug}/brand/fonts/` (optional) — custom font files for PDF embedding
+- `companies/{client_slug}/templates/pdf/` (optional) — branded PDF template shells
+- `companies/{client_slug}/images/heroes/` (optional) — hero images for cover pages
+- `companies/{client_slug}/manifest.json` (optional) — image library index
+- `companies/{client_slug}/guidelines.md` (optional) — brand voice and visual guidelines
+- `companies/{client_slug}/profile.json` (optional) — company profile fields
+- `companies/{client_slug}/people.json` (optional) — team-member data for bios
 
 ## Overview
 

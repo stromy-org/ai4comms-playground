@@ -3,8 +3,22 @@ name: pptx
 description: "DEFAULT PPTX skill — presentation creation, editing, analysis. Use for any .pptx work that isn't an explicit high-stakes/premium/HD pitch deck (which goes to `pptx-hd`). Handles: (1) creating new presentations, (2) modifying/editing content, (3) working with layouts, (4) adding comments/speaker notes, (5) analysing existing decks. Consumes brand data from charter.json + tokens.css + boilerplate.json + templates/pptx/ HTML shells when present. Also supports `render-anchors` mode (materialises brand anchor templates from spec files)."
 license: Proprietary. LICENSE.txt has complete terms
 ---
+> **Promoted to:** MCPs/stromy-format-mcp/skills/pptx/ 
+> Cowork retains a read-only copy for offline experimentation. Edit the canonical SKILL.md in the format-mcp repo.
 
 # PPTX creation, editing, and analysis
+
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand colours, fonts, logo, spacing, presentation formatting rules
+- `companies/{client_slug}/tokens.css` (optional) — CSS variables for branded HTML→PPTX conversion
+- `companies/{client_slug}/boilerplate.json` (optional) — company name, tagline, footer text
+- `companies/{client_slug}/manifest.json` (optional) — image library index
+- `companies/{client_slug}/templates/pptx/` (optional) — branded slide template shells (HTML + anchors.pptx)
+- `companies/{client_slug}/brand/` (optional) — logo files referenced by charter.json
+- `companies/{client_slug}/images/` (optional) — hero / processed / slides images
+- `companies/{client_slug}/profile.json` (optional) — company profile fields used in cover slides
+- `companies/{client_slug}/people.json` (optional) — team-member data for bio slides
 
 ## Overview
 

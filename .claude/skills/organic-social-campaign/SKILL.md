@@ -5,6 +5,11 @@ description: "Build organic B2B social media campaigns — editorial strategy, c
 
 # Organic Social Campaign
 
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/profile.json` — company positioning + audiences
+
 ## Overview
 
 This skill builds organic B2B social media campaigns as a systems design problem — not a creative exercise. The goal is to define objectives, editorial architecture, operating rhythms, and measurement so that every post is traceable to business outcomes. Organic social optimizes for compounding: reach via credibility, engagement via relevance, and distribution via employee networks.

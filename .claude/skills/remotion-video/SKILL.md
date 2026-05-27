@@ -2,10 +2,16 @@
 name: remotion-video
 description: Create animated videos using Remotion (React-based video framework) with optional company branding from charter.json. Provides branded components, animation utilities, chart/diagram primitives, and a scaffold-to-render workflow. Use when creating videos, explainer animations, data visualizations, or corporate presentations in video format.
 ---
+> **Promoted to:** MCPs/stromy-format-mcp/skills/remotion-video/ 
+> Cowork retains a read-only copy for offline experimentation. Edit the canonical SKILL.md in the format-mcp repo.
 
 # Remotion Video
 
-Create animated videos using [Remotion](https://www.remotion.dev/) with optional company branding. Provides pre-built components, animation utilities, and a scaffold-to-render workflow.
+## Inputs from client-data
+
+- `companies/{client_slug}/charter.json` — brand colours, fonts, logo
+- `companies/{client_slug}/profile.json` (optional) — company name, tagline
+- `companies/{client_slug}/images/` (optional) — brand image library for video assets
 
 ## Output Location
 

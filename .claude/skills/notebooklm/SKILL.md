@@ -5,7 +5,9 @@ description: "Generate content using Google NotebookLM — audio overviews (podc
 
 # NotebookLM
 
-Generate professional content from source material using Google NotebookLM's API via the `notebooklm-py` library. Supports audio overviews (podcasts), video explainers, slides, quizzes, flashcards, reports, infographics, mind maps, data tables, and more — with optional company branding.
+## Inputs from client-data
+
+- `companies/{client_slug}/profile.json` (optional) — company context for notebook prompts
 
 ## Prerequisites
 
