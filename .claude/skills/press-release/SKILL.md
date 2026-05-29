@@ -10,6 +10,28 @@ description: "Write and manage corporate press releases with full governance lif
 - `companies/{client_slug}/charter.json` — brand identity
 - `companies/{client_slug}/profile.json` — company name, HQ, spokespeople
 - `companies/{client_slug}/press-releases/` (optional) — prior press releases for tone alignment
+- `client-data/clients/{client_slug}/voice/voice-profile.md` (optional) — entity voice profile (L2)
+- `client-data/clients/{client_slug}/voice/voice-anchors.md` (optional) — entity voice anchors (L2)
+
+## Voice
+
+A press release is prose, so run the org voice cascade before drafting the
+headline, lede, body, and quotes.
+
+1. **Read the L1 baseline.** When the `stromy-format` MCP is connected, read
+   `voice://baseline` (anti-AI-smell rules) and `voice://review` (the pre-output
+   review checklist) via `ReadMcpResourceTool`.
+2. **Read the local L2 profile when present.** Resolve the company slug as in
+   "Company Data Integration" and read
+   `client-data/clients/<slug>/voice/voice-profile.md` and `voice-anchors.md`
+   if they exist. When no slug is in scope, use the local `stromy` profile only
+   if that directory exists; otherwise proceed with L1 only.
+3. **Two-pass write.** Draft the release, run the review checklist against it,
+   then rewrite once before sending it into the approval workflow. Quotes are
+   the usual offender for AI cadence; check them especially.
+
+This is a text-only voice pass. The skill mentions the cascade as context; it
+does not invoke another skill.
 
 ## Overview
 

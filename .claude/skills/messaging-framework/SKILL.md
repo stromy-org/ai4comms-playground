@@ -10,6 +10,28 @@ description: "Build structured messaging frameworks — core narrative, messagin
 - `companies/{client_slug}/charter.json` — brand identity
 - `companies/{client_slug}/profile.json` — company positioning + audiences
 - `companies/{client_slug}/messaging/` (optional) — prior frameworks for context
+- `client-data/clients/{client_slug}/voice/voice-profile.md` (optional) — entity voice profile (L2)
+- `client-data/clients/{client_slug}/voice/voice-anchors.md` (optional) — entity voice anchors (L2)
+
+## Voice
+
+Messaging copy is prose, so run the org voice cascade before writing any
+audience-facing language (core narrative, pillar statements, proof points,
+adaptations).
+
+1. **Read the L1 baseline.** When the `stromy-format` MCP is connected, read
+   `voice://baseline` (anti-AI-smell rules) and `voice://review` (the pre-output
+   review checklist) via `ReadMcpResourceTool`.
+2. **Read the local L2 profile when present.** Resolve the company slug as in
+   "Company Data Integration" and read
+   `client-data/clients/<slug>/voice/voice-profile.md` and `voice-anchors.md`
+   if they exist. When no slug is in scope, use the local `stromy` profile only
+   if that directory exists; otherwise proceed with L1 only.
+3. **Two-pass write.** Draft the messaging language, run the review checklist
+   against it, then rewrite once before finalizing the framework.
+
+This is a text-only voice pass. The skill mentions the cascade as context; it
+does not invoke another skill.
 
 ## Overview
 
