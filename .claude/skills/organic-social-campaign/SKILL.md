@@ -7,8 +7,45 @@ description: "Build organic B2B social media campaigns — editorial strategy, c
 
 ## Inputs from client-data
 
-- `companies/{client_slug}/charter.json` — brand identity
-- `companies/{client_slug}/profile.json` — company positioning + audiences
+- `companies/{client_slug}/charter.json` — brand identity (colors, fonts, logo, image catalog)
+- `companies/{client_slug}/profile.json` — company positioning, services, audiences
+- `companies/{client_slug}/people.json` (optional) — SMEs, authors, spokespersons
+- `companies/{client_slug}/messaging/pillars.json` (optional) — reusable messaging pillars
+- `companies/{client_slug}/messaging/proof-points.json` (optional) — evidence library
+- `companies/{client_slug}/messaging/audiences.json` (optional) — audience profiles / ICP seeds
+- `companies/{client_slug}/messaging/narratives.json` (optional) — core narratives, positioning
+- `companies/{client_slug}/voice/voice-profile.md` (optional) — L2 voice profile
+- `companies/{client_slug}/voice/voice-anchors.md` (optional) — L2 reference passages
+- `companies/{client_slug}/voice/voice-extensions.json` (optional) — L2 additive bans
+- `companies/{client_slug}/social_media/config.json` (optional) — platforms, UTM, compliance, content_generation
+- `companies/{client_slug}/social_media/organic/pillars.json` (optional) — editorial pillars from a prior run
+- `companies/{client_slug}/social_media/organic/series.json` (optional) — repeatable content series
+- `companies/{client_slug}/social_media/organic/community-playbook.json` (optional) — response SLAs, tone, escalation
+- `companies/{client_slug}/social_media/organic/advocacy.json` (optional) — employee advocacy config
+- `companies/{client_slug}/tokens.css` (optional) — design tokens for branded output
+- `companies/{client_slug}/logos/` (optional) — logo variant files
+
+### Path resolution (`{base}`)
+
+Throughout this skill, `{base}` is the single resolved root for all the inputs
+above. Resolve it **overlay-first** (per `skill-data-loading.md` §2):
+
+1. **Plugin overlay (primary, steady state):** if a `companies/` directory
+   exists, `{base}` = `companies/{client_slug}/`. Resolve `{client_slug}` from
+   that overlay — zero entries → fail loud ("this plugin has no `companies/`
+   overlay; client data unavailable"); one entry → use it; multiple → ask the
+   user which client, never guess. Never accept `client_slug` as a parameter.
+2. **Cowork source fallback (development):** when running inside the Cowork
+   checkout with no `companies/` overlay, `{base}` = `client-data/clients/<slug>/`.
+
+This skill is authored in Cowork and synced into client plugin overlays (the
+same distribution model as `proposal`, `messaging-framework`, `press-release`).
+The plugin overlay is therefore the **primary, steady-state contract** (it is
+what `validate-plugin-completeness.py` Invariant #3 enforces); the Cowork
+direct-read path is the development fallback. The `{base}` rule is correct in
+both contexts. Missing **required** input (charter/profile) → surface the full
+resolved path and ask. Missing **optional** input → degrade per the Content
+Assembly fallbacks below.
 
 ## Overview
 
@@ -20,45 +57,72 @@ The skill is interactive and phase-gated. Each phase produces deliverables and i
 
 ### Discovery
 
-1. List `client-data/clients/` for available company profiles
-2. One company → use by default; multiple → ask which company this campaign is for
-3. If none exist → gather company details manually during intake
+Resolve `{base}` overlay-first (see **Path resolution** above):
+
+1. If a `companies/` overlay exists → `{base}` = `companies/{client_slug}/`
+   (one entry → use; multiple → ask which company; zero → fail loud).
+2. Else (Cowork checkout) → `{base}` = `client-data/clients/<slug>/`; if no
+   client is in scope, ask, or gather company details manually during intake.
+
+Do not list the central `client-data/clients/` repo and ask as the *primary*
+discovery — the overlay-first rule above governs which client is in scope.
 
 ### Loading Company Data
 
 ```
-client-data/clients/<name>/profile.json              → Company identity, services, value proposition
-client-data/clients/<name>/charter.json         → Colors, fonts, logo (for branded output guidance)
-client-data/clients/<name>/people.json                → SMEs, authors, spokespersons
-client-data/clients/<name>/messaging/                 → Messaging content library:
+{base}/profile.json              → Company identity, services, value proposition
+{base}/charter.json              → Colors, fonts, logo (for branded output guidance)
+{base}/people.json               → SMEs, authors, spokespersons (optional)
+{base}/messaging/                → Messaging content library (optional):
   ├── pillars.json         → Reusable messaging pillars (seed editorial pillars)
   ├── proof-points.json    → Evidence library (seed content proof)
   ├── audiences.json       → Audience profiles (seed ICP definition)
   └── narratives.json      → Core narratives, positioning
-client-data/clients/<name>/social_media/              → Social media config and content:
-  ├── config.json          → Platforms, UTM taxonomy, hashtags, compliance posture
+{base}/voice/                    → L2 voice profile (optional; see voice-integration.md)
+{base}/social_media/             → Social media config and content (optional):
+  ├── config.json          → Platforms, UTM taxonomy, hashtags, compliance, content_generation
   └── organic/
       ├── pillars.json     → Editorial pillars (if previous run exists)
       ├── series.json      → Repeatable content series
       ├── community-playbook.json → Response SLAs, tone, escalation
-      └── advocacy.json    → Employee advocacy program config
+      ├── advocacy.json    → Employee advocacy program config
+      ├── posts.json       → Frozen per-post objects (Phase 7, if previous run exists)
+      └── style-blocks/    → Locked visual prompt blocks (Phase 8, if generated)
 ```
 
-When `social_media/organic/` already exists, the skill operates in **resume mode** — read the existing content and offer the user a choice: continue from where they left off, rework a specific phase, or start fresh.
+When `{base}/social_media/organic/` already exists, the skill operates in **resume mode** — read the existing content and offer the user a choice: continue from where they left off, rework a specific phase, or start fresh. Resume can re-enter mid-Phase-8 by edition (see Phase 8).
 
 ### Content Assembly
 
 | Component | Source | Fallback |
 |-----------|--------|----------|
-| Company identity | `profile.json` → `company` | Ask user |
-| Services/sectors | `profile.json` → `services[]` | Ask user |
-| Target audiences | `messaging/audiences.json` | Ask user to define ICP |
-| Messaging pillars | `messaging/pillars.json` | Build editorial pillars from scratch |
-| Proof points | `messaging/proof-points.json` | Ask user for evidence |
-| Platform config | `social_media/config.json` | Ask user which platforms |
-| Existing editorial pillars | `social_media/organic/pillars.json` | Build new |
-| UTM taxonomy | `social_media/config.json` → `utm` | Propose defaults |
-| Compliance posture | `social_media/config.json` → `compliance` | Default to conservative EU posture |
+| Company identity | `{base}/profile.json` → `company` | Ask user |
+| Services/sectors | `{base}/profile.json` → `services[]` | Ask user |
+| Target audiences | `{base}/messaging/audiences.json` | Ask user to define ICP |
+| Messaging pillars | `{base}/messaging/pillars.json` | Build editorial pillars from scratch |
+| Proof points | `{base}/messaging/proof-points.json` | Ask user for evidence |
+| Platform config | `{base}/social_media/config.json` | Ask user which platforms |
+| Existing editorial pillars | `{base}/social_media/organic/pillars.json` | Build new |
+| UTM taxonomy | `{base}/social_media/config.json` → `utm` | Propose defaults |
+| Compliance posture | `{base}/social_media/config.json` → `compliance` | Default to conservative EU posture |
+
+## Voice (prerequisite for every copy step)
+
+Any step that produces copy — Phase 5 sample copy/hooks, the Phase 7 creative
+fields on `posts.json`, Phase 8 captions/hooks/CTAs — runs a **draft → review →
+rewrite** pass against the org voice cascade:
+
+1. Load **L1** baseline — `voice://baseline` + `voice://rules.json` from
+   `stromy-format-mcp` — and **L2** client voice from `{base}/voice/*`.
+2. Draft the copy, self-review against the combined rules (L2 may add bans, never
+   relax L1), then rewrite until it passes — only then show the user.
+3. Ban engagement-bait, filler openers, antithesis frames, and overused LLM
+   vocabulary. Cross-check the platform's tone notes.
+
+If `voice://*` is unreachable (headless), fall back to L2-only + the inline
+anti-slop checklist and `log` the degradation — never fail the copy step. This
+skill *mentions* the cascade as context; it never invokes another skill. Full
+loop, precedence, and checklist: [voice-integration.md](references/voice-integration.md).
 
 ## Workflow
 
@@ -291,14 +355,106 @@ Compile the complete governance document:
 
 After Phase 6, compile all deliverables and present a summary to the user.
 
-**Offer to save reusable config** to the company's `social_media/` directory:
+**Offer to save reusable config** to `{base}/social_media/`:
 - `config.json` — platform + UTM + compliance settings (if new or changed)
 - `organic/pillars.json` — editorial pillar definitions
 - `organic/series.json` — content series definitions
 - `organic/community-playbook.json` — community management rules
 - `organic/advocacy.json` — advocacy program config (if scoped)
 
+Write `"schema_version": "1.0"` into **every** file persisted here. The shapes
+and the shared contract with `paid-social-campaign` are documented in
+[social-data-schema.md](references/social-data-schema.md) — keep additions
+additive (consumers ignore unknown keys); never repurpose a key without bumping
+the version. On read, a missing `schema_version` is treated as `"1.0"`.
+
 This makes the content available for future runs and for the `paid-social-campaign` skill to reference when designing amplification strategies.
+
+## Optional downstream phases
+
+Phases 7–8 and Export are **optional extensions** — the strategy and editorial
+calendar (Phases 1–6) are the product and remain fully valuable on their own.
+Run these only when the user wants platform-correct per-post objects (Phase 7),
+generated assets (Phase 8), or a published-calendar export.
+
+### Phase 7 — Freeze to post objects
+
+At calendar approval, freeze the approved calendar into a validated,
+graph-portable `posts.json` — the COPE expansion where one pillar atom fans out
+into N native per-post objects. Three artifacts (full schemas in
+[post-object-schema.md](references/post-object-schema.md)):
+
+1. **Emit `calendar.json`** — the structured form of the Phase 5 calendar (rows
+   of week / pillar_id / series_id / concept / format / cta / platforms / owner /
+   utm).
+2. **Run the builder** —
+   `uv run python scripts/build_posts.py calendar.json {base}/social_media/config.json -o posts.json`.
+   This fills the **structural** fields deterministically (stable `post_id`,
+   platform, surface, `media_spec`, utm, schedule) and leaves the **creative**
+   fields (`hook`, `body`, `thread_parts`, `hashtags`, `cta`) empty. Builder =
+   structure; agent = copy; validator = gate. A malformed row fails with the row
+   index and writes no partial output.
+3. **Fill the creative fields in chat** — run each through the voice cascade
+   (see Voice section).
+4. **Validate** — `uv run python scripts/validate_posts.py posts.json`. Rejects
+   bad aspect ratios, `producer`↔`type` mismatches, and leftover empty
+   placeholders, naming the offending `post_id`. Fix and re-run until it exits 0.
+5. **Persist** — write to `{base}/social_media/organic/posts.json` with
+   `"schema_version": "1.0"`.
+
+The per-post object is a **superset** of the Phase 5 calendar columns — it
+extends, never replaces, the calendar. The same `build_posts.py` /
+`validate_posts.py` surfaces are exercised by the eval; the skill never carries
+parallel expansion logic.
+
+### Phase 8 — Content generation (optional)
+
+Generate branded, coherent assets **one edition at a time with human review** —
+per-platform configurable, consuming the `media-gen` MCP. Full loop, brand-context
+construction, and edge cases: [content-generation.md](references/content-generation.md);
+config + media taxonomy: [platform-content-config.md](references/platform-content-config.md).
+
+1. **Gate.** Runs only if the user opts in AND `content_generation.enabled`.
+   State up front: identity reuse (same recurring subject across posts) requires
+   `media-gen` reference conditioning (Track A, `PLAN_reference_conditioning.md`);
+   if unavailable, assets are *family-resemblance* (consistent style/palette),
+   not identical subjects — get explicit acknowledgement.
+2. **Lock the style block once** (campaign-level): derive a verbatim prompt
+   string from charter/tokens; persist to
+   `{base}/social_media/organic/style-blocks/<ref>.txt`. Reused across editions.
+3. **Per edition (default one week), in order:**
+   - **Select + partition** — posts where `media_spec.type != none`, capped at
+     `max_assets_per_edition` (`log` any deferred — no silent truncation).
+     Partition by `media_spec.producer`: media-gen (`image`/`carousel`/`reel`/
+     `short`) vs non-media-gen (`infographic`/`document` → `chart`/`diagram`/
+     `pdf`/`pptx`).
+   - **Anchor-select loop** (media-gen) — build the `brand_context` dict
+     (mirror `build_brand_context_from_charter`; call `validate_brand_context`),
+     `generate_image` for 3–4 candidates → **human picks ONE anchor** → set
+     `anchor_asset_ref` on siblings.
+   - **Generate siblings & video** (media-gen) — with Track A, pass the anchor as
+     a `subject`/`first_frame` reference (true identity); without it, reuse the
+     locked prompt block verbatim (family resemblance). `carousel` → N ×
+     `generate_image`; `reel`/`short` → `generate_video` at 9:16.
+   - **Brief non-media-gen posts** — emit a structured brief into the post and
+     flag the producer skill (`chart`/`diagram`/`pdf`/`pptx`) for the user to run
+     separately. Phase 8 does not invoke those skills or call `media-gen` here.
+   - **Captions** for the edition pass the **voice cascade** (Voice section).
+   - **Human reviews the edition** (tiles + briefs + captions) → approve → set
+     `status` (`media_ready` / `brief_ready`) → **advance to next edition**.
+     Never generate the next edition before this gate.
+
+Asset bytes (base64 + sha256 from the MCP) are written to
+`workspace/<client>/output/organic-social-campaign/assets/`.
+
+### Export — Planner / SharePoint / Excel
+
+After Phase 7/8, offer to export `posts.json` (+ asset references) to a
+human-publishable surface — an ms365 Planner board, a SharePoint list, or an
+Excel calendar (tabular). Mention `m365-manager`'s safety rules (draft / confirm;
+never delete) as context; do not invoke it. **No auto-publish** to LinkedIn /
+Meta / X / TikTok — the publishing boundary is the exported calendar. (`reepl`
+exists for LinkedIn only and is the user's separate choice.)
 
 ## Reference Files
 
@@ -315,6 +471,11 @@ Load these as needed — do not read all at once.
 | [measurement-benchmarks.md](references/measurement-benchmarks.md) | Phase 6 — when setting KPI targets. Directional benchmarks by platform (use cautiously). |
 | [community-management.md](references/community-management.md) | Phase 5 — when building community playbook. Response frameworks, crisis protocol, moderation. |
 | [editorial-calendar-template.md](references/editorial-calendar-template.md) | Phase 5 — when generating the calendar. Structure and examples. |
+| [social-data-schema.md](references/social-data-schema.md) | When persisting to `social_media/` (Final Output, Phase 7/8). `config.json` + `organic/*` shapes, `schema_version`, the paid-social shared contract. |
+| [voice-integration.md](references/voice-integration.md) | Any copy-producing step (Phase 5/7/8). The draft→review→rewrite loop, L1/L2 precedence, anti-slop checklist, headless fallback. |
+| [post-object-schema.md](references/post-object-schema.md) | Phase 7 — when freezing the calendar. `calendar.json` input + per-post object schema, the builder/validator seam, aspect Literal sets. |
+| [platform-content-config.md](references/platform-content-config.md) | Phase 8 — the `content_generation` config block + surface→producer→primitive media taxonomy (what media-gen renders vs what routes to chart/diagram/pdf/pptx). |
+| [content-generation.md](references/content-generation.md) | Phase 8 — the edition-batched generation loop, anchor-select, Track A vs family-resemblance, brand_context construction, asset output, edge cases. |
 
 ## Output Format Production
 
@@ -330,9 +491,9 @@ This skill owns organic social campaign architecture — editorial strategy, con
 **Default**: Produce markdown first. If the user wants formatted output, recommend XLSX for the editorial calendar and content matrix (tabular data), DOCX for the strategy and playbook documents.
 
 **Brand context to carry forward** when producing formatted output:
-- Brand charter location: `client-data/clients/<name>/charter.json`
+- Brand charter location: `{base}/charter.json`
 - Apply heading color from `colors.primary`, body font from `fonts.body`
-- Logo from `brand/logos/` (path in charter `logo` section)
+- Logo from `{base}/logos/` (path in charter `logo` section)
 
 ### Diagram Integration
 

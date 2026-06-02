@@ -39,6 +39,8 @@ client-data/clients/<name>/messaging/                 → Messaging content libr
   └── narratives.json      → Core positioning
 client-data/clients/<name>/social_media/              → Social media config and content:
   ├── config.json          → Platforms, UTM taxonomy, hashtags, compliance posture
+  │                          (now also carries "schema_version" and an organic
+  │                          "content_generation" block — ignore unknown keys)
   └── paid/
       ├── audiences.json   → Targeting definitions (prospecting, retargeting, ABM)
       ├── campaigns.json   → Campaign briefs registry (hypothesis, status, learnings)
