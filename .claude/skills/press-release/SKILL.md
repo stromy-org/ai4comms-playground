@@ -7,11 +7,11 @@ description: "Write and manage corporate press releases with full governance lif
 
 ## Inputs from client-data
 
-- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/charter.json` — brand identity; read `expression` (optional) for compact brand direction (`principles`, `signatureElements`, `antiPatterns`) and `identity.positioning`
 - `companies/{client_slug}/profile.json` — company name, HQ, spokespeople
 - `companies/{client_slug}/press-releases/` (optional) — prior press releases for tone alignment
-- `client-data/clients/{client_slug}/voice/voice-profile.md` (optional) — entity voice profile (L2)
-- `client-data/clients/{client_slug}/voice/voice-anchors.md` (optional) — entity voice anchors (L2)
+- `companies/{client_slug}/voice/voice-profile.md` (optional) — entity voice profile (L2)
+- `companies/{client_slug}/voice/voice-anchors.md` (optional) — entity voice anchors (L2)
 
 ## Voice
 
@@ -23,7 +23,7 @@ headline, lede, body, and quotes.
    review checklist) via `ReadMcpResourceTool`.
 2. **Read the local L2 profile when present.** Resolve the company slug as in
    "Company Data Integration" and read
-   `client-data/clients/<slug>/voice/voice-profile.md` and `voice-anchors.md`
+   `companies/<slug>/voice/voice-profile.md` and `voice-anchors.md`
    if they exist. When no slug is in scope, use the local `stromy` profile only
    if that directory exists; otherwise proceed with L1 only.
 3. **Two-pass write.** Draft the release, run the review checklist against it,
@@ -32,6 +32,39 @@ headline, lede, body, and quotes.
 
 This is a text-only voice pass. The skill mentions the cascade as context; it
 does not invoke another skill.
+
+## Deliverable canvas (prerequisite)
+
+<!-- canvas-protocol:start v1 -->
+This skill produces a multi-section deliverable. Collaborate through a single
+chat artifact — the deliverable canvas. The canvas is the source of truth for
+the in-progress draft; chat scroll-back is not.
+
+1. **Resolve the section plan from this skill's own workflow.** Use the
+   approved structure this skill already defines (or the prompt/resource it
+   names). The canvas protocol does not invent sections.
+2. **Choose the substrate.** Use `markdown` by default for strategic wording,
+   plans, and other content where layout does not change meaning. Use `html`
+   only when visual arrangement materially affects the user's decision. HTML is
+   a **one-way display** surface only: never call back into an MCP from the
+   artifact.
+3. **Open the canvas.** Mint an 8-character hex `canvas_id`, then emit exactly
+   one artifact with identifier `canvas-<canvas_id>-<deliverable_type>`. One
+   chat = one canvas.
+4. **Iterate in the canvas.** After every change, re-emit the **full** canvas
+   as a new version of the same artifact. Never emit deltas. Never mint a
+   second canvas mid-session.
+5. **Self-check before handoff.** Every planned section exists, is substantive,
+   and appears in the agreed order. No `TBD`, placeholders, or pending
+   structural questions remain.
+6. **Sign-off gate.** Ask the user to confirm the canvas is final before any
+   render handoff or client-data write.
+7. **Construct the envelope.** Hand off `{deliverable_type, title, client_id,
+   sections:[{id, title, body}], meta:{canvas_id, substrate,
+   methodology_version}}`, where `methodology_version` is `1`. The downstream
+   formatter or terminal write step consumes the envelope — never raw chat
+   history.
+<!-- canvas-protocol:end -->
 
 ## Overview
 
@@ -176,6 +209,14 @@ Wait for confirmation or adjustments before proceeding to Phase 5.
 
 Now write. Follow AP-style conventions and inverted pyramid structure.
 
+**Brand expression (read before drafting).** Before writing, read `expression` from `charter.json`. If present, use as prose guidance:
+- `expression.principles` — inform the rhetorical register (e.g., "measured authority" → factual lede, no hype; "evidence before decoration" → data-led subheads)
+- `expression.signatureElements` — reflect where appropriate in structural choices (e.g., a brand with an "editorial" type expression may use a tighter, sharper headline)
+- `expression.antiPatterns` — treat as a ban-list alongside the voice cascade's forbidden constructions
+- `identity.positioning` — use to calibrate the "why this matters" framing in supporting paragraphs
+- If `expression` is absent, fall back to the voice profile only with a soft note; no hard failure
+- **Voice-cascade rule:** `expression` is additive to the L1 baseline + L2 profile bans, never a relaxation. Expression principles may sharpen tone but must not reintroduce a banned construction. Where a Brand Context API narrative is attached (`candidate.context`), treat it as input evidence for expression principles, not a voice source that overrides the cascade.
+
 **Structure** (every release, in this order):
 1. **Headline** — The news in plain language, 6-12 words, under 100 characters
 2. **Subheadline** (optional) — Supporting context or key metric
@@ -291,20 +332,25 @@ The primary output is a markdown-formatted press release. After the content is f
 
 ## Output Format Production
 
-This skill owns press release content — structure, editorial quality, governance, and distribution planning. Document production is handled by the appropriate format skill:
+**Gate: do not produce formatted output until the deliverable canvas sign-off gate has passed** (see "Deliverable canvas" above).
 
-| Output | Skill | What it provides |
-|--------|-------|-----------------|
-| DOCX | `docx` | Word document creation with branded letterhead styling, headers/footers |
-| PDF | `pdf` | PDF creation for distribution-ready releases |
+This skill owns press release content — structure, editorial quality, governance, and distribution planning. Render-path document production goes through `format-prepare-document`, which then routes to the terminal renderer.
+
+| Output | Routed renderer | What it provides |
+|--------|-----------------|-----------------|
+| DOCX | `format-docx` | Word document creation with branded letterhead styling, headers/footers |
+| PDF | `format-pdf-hd` | PDF creation for distribution-ready releases |
 
 **Default**: If the user doesn't specify a format, produce markdown first and ask whether they'd like a formatted DOCX or PDF. Press releases are most commonly distributed as PDF attachments or pasted into wire services — recommend accordingly.
 
-**Brand context to carry forward** when producing formatted output:
-- Brand charter location: `client-data/clients/<name>/charter.json`
-- Apply heading color from `colors.primary`, body font from `fonts.body`, logo from `brand/logos/` (path in charter `logo` section)
+**Brand context to carry forward** when producing formatted output through `format-prepare-document`:
+- Brand charter location: `companies/{client_slug}/charter.json`
+- Apply heading color from `colors.primary`, body font from `fonts.body`, logo from `logos/` (path in charter `logo` section)
 - Use `document` section from charter for margins, headers, footers
 - Include company logo on the release header if available
+- Include resolved `expression` (if present) and `deliverable_genre: "press-release"` in the envelope for downstream render direction
+
+After the release is delivered, *mention* (never auto-activate) that the user can capture feedback with `asset-feedback`, and file your own `source: agent` retrospective there if the run hit an instruction gap or tool-call failure worth fixing.
 
 ## Output Location
 
