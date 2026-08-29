@@ -8,30 +8,67 @@ license: Proprietary. LICENSE.txt has complete terms
 
 ## Inputs from client-data
 
-- `companies/{client_slug}/charter.json` — brand identity
+- `companies/{client_slug}/charter.json` — brand identity; read `expression` (optional) for compact brand direction (`principles`, `signatureElements`, `antiPatterns`) and `identity.positioning`
 - `companies/{client_slug}/profile.json` — company name, services, regions
 - `companies/{client_slug}/proposals/methodologies.json` (optional) — methodology library
 - `companies/{client_slug}/boilerplate.json` (optional) — boilerplate sections
+- `companies/{client_slug}/voice/voice-profile.md` (optional) — entity voice profile (L2)
+- `companies/{client_slug}/voice/voice-anchors.md` (optional) — entity voice anchors (L2)
 
-## Canvas protocol (prerequisite)
+## Voice
 
-This skill produces a structured deliverable — it MUST use the deliverable canvas (see the [`deliverable-canvas`](../deliverable-canvas/SKILL.md) skill for the full protocol). The canvas is the source of truth for the in-progress proposal; chat scroll-back is not.
+A proposal is client-facing prose, so run the org voice cascade before writing the
+narrative sections (context, approach, scope, pricing rationale, next steps).
 
-**Required tool sequence:**
+1. **Read the L1 baseline.** When the `stromy-format` MCP is connected, read
+   `voice://baseline` (anti-AI-smell rules) and `voice://review` (the pre-output
+   review checklist) via `ReadMcpResourceTool`.
+2. **Read the local L2 profile when present.** Resolve the company slug as in
+   "Company Data Integration" and read `companies/<slug>/voice/voice-profile.md` and
+   `voice-anchors.md` if they exist.
+3. **Apply, then disclose.** Review the draft against L1 + L2; if neither is
+   reachable, say so explicitly rather than letting a silent skip read as a pass.
+   L2 may add bans but never relax L1.
 
-1. **Resume or create.** First call `mcp__deliverable-canvas__canvas_list(client_id=<client_slug>, deliverable_type="proposal")`. If candidates exist, ask the user whether to resume a prior canvas; if yes, call `canvas_get(canvas_id)`. Otherwise call `canvas_create(deliverable_type="proposal", client_id=<client_slug>, title=<short>, template_id="proposal_v1", brief=<one-paragraph engagement summary>, opened_by_skill="proposal", methodology_version=<if known>)`.
-2. **Render the artifact.** Read `canvas://<canvas_id>/artifact` and emit it as an HTML artifact so the user sees the canvas alongside chat.
-3. **Per turn.** When the user instructs a section change ("make pricing more aggressive"), call `canvas_update_section(canvas_id, section_id=<one of: context, approach, scope, timeline, pricing, risks, next_steps>, body=<new full body>, summary=<one-line note>, instructed_by_user=True)`. For agent-initiated cleanups, set `instructed_by_user=False`. Re-emit the artifact after each write.
-4. **Finalize before formatter handoff.** Call `canvas_finalize(canvas_id)`. Then hand `canvas_id` to the formatter (`pptx`, `docx`, `pdf`) — the formatter calls `canvas_get` itself.
+## Deliverable canvas (prerequisite)
 
-**Failure mode.** If the canvas MCP is unreachable, surface the error and ask the user: (a) wait, or (b) draft inline without persistence. Never silently degrade.
+<!-- canvas-protocol:start v1 -->
+This skill produces a multi-section deliverable. Collaborate through a single
+chat artifact — the deliverable canvas. The canvas is the source of truth for
+the in-progress draft; chat scroll-back is not.
+
+1. **Resolve the section plan from this skill's own workflow.** Use the
+   approved structure this skill already defines (or the prompt/resource it
+   names). The canvas protocol does not invent sections.
+2. **Choose the substrate.** Use `markdown` by default for strategic wording,
+   plans, and other content where layout does not change meaning. Use `html`
+   only when visual arrangement materially affects the user's decision. HTML is
+   a **one-way display** surface only: never call back into an MCP from the
+   artifact.
+3. **Open the canvas.** Mint an 8-character hex `canvas_id`, then emit exactly
+   one artifact with identifier `canvas-<canvas_id>-<deliverable_type>`. One
+   chat = one canvas.
+4. **Iterate in the canvas.** After every change, re-emit the **full** canvas
+   as a new version of the same artifact. Never emit deltas. Never mint a
+   second canvas mid-session.
+5. **Self-check before handoff.** Every planned section exists, is substantive,
+   and appears in the agreed order. No `TBD`, placeholders, or pending
+   structural questions remain.
+6. **Sign-off gate.** Ask the user to confirm the canvas is final before any
+   render handoff or client-data write.
+7. **Construct the envelope.** Hand off `{deliverable_type, title, client_id,
+   sections:[{id, title, body}], meta:{canvas_id, substrate,
+   methodology_version}}`, where `methodology_version` is `1`. The downstream
+   formatter or terminal write step consumes the envelope — never raw chat
+   history.
+<!-- canvas-protocol:end -->
 
 ## Overview
 
-This skill produces polished consulting proposals, executive briefs, capability statements, and bid documents. It is **format-agnostic** — it owns the proposal domain logic (structure, content strategy, quality gates) and delegates formatting to output skills.
+This skill produces polished consulting proposals, executive briefs, capability statements, and bid documents. It is **format-agnostic** — it owns the proposal domain logic (structure, content strategy, quality gates) and hands signed-off render work to `format-prepare-document`.
 
 **This skill provides the *what*** — proposal structure, content assembly from company data, interactive intake, and quality gates.
-**Format skills provide the *how*** — the `docx` skill for Word documents, `pptx` for presentations, `pdf` for PDF export.
+**`format-prepare-document` provides the render-path handoff** — structure packaging, substrate-aware planning, and routing to the final `format-*` renderer.
 
 Use this skill when a user asks to:
 - Write or generate a consulting proposal
@@ -137,11 +174,11 @@ Wait for user approval before proceeding to Phase 4.
 
 ### Phase 4 — Production
 
-Execute the proposal workflow (Steps 1-7 below). Claude will produce the document in the chosen output format.
+Execute the proposal workflow (Steps 1-7 below). All drafting happens **in the deliverable canvas** (see "Deliverable canvas" above) — open it now if not already open.
 
 ### Phase 5 — Review
 
-Present the draft to the user with a quality gate summary. Run the checklists from [quality-gates.md](references/quality-gates.md) and flag any issues.
+Present the draft canvas to the user with a quality gate summary. Run the checklists from [quality-gates.md](references/quality-gates.md) and flag any issues. Iterate in the canvas until the user signs off — only then proceed to document production (Step 3 Assembly onward).
 
 ## Editing Modes
 
@@ -211,32 +248,41 @@ For detailed guidance on each section, see [sections.md](references/sections.md)
 
 ### Step 2 — Section Drafting
 
-Draft each section following the guidance in [sections.md](references/sections.md):
+Draft each section **in the deliverable canvas**, following the guidance in [sections.md](references/sections.md):
 
 - **Pull from content library first** — reuse and adapt case studies, bios, and methodology descriptions before writing new content
 - **Substantiate every claim** — each assertion needs a proof point (case study reference, metric with source, certification)
 - **Write for the evaluator** — lead with the answer, then provide supporting detail
 - **Maintain consistent voice** — same tense, same level of formality, same terminology throughout
 - **Skip the executive summary** — it gets written in Step 4
+- **Apply brand expression (if present).** Read `expression` from `charter.json`. If present, use as prose guidance — not hard layout rules:
+  - `expression.principles` — let these inform tone and emphasis (e.g., "measured authority" → lead with evidence, not assertion)
+  - `expression.signatureElements` — weave into structure where natural (e.g., a brand that uses "indexed rules" may benefit from numbered evidence citations)
+  - `expression.antiPatterns` — avoid these constructions in the prose and section framing
+  - `identity.positioning` — use to sharpen the executive summary angle and differentiation framing
+  - If `expression` is absent, fall back to the voice profile only (soft note; no hard failure — output-tier brands may legitimately omit it)
+  - **Voice-cascade rule:** `expression` is additive to the L1 baseline + L2 profile bans, never a relaxation. Expression principles may sharpen tone but must not reintroduce a banned construction. Where a Brand Context API narrative is attached (`candidate.context`), treat it as input evidence for expression principles, not a voice source that overrides the cascade.
 
 ### Step 3 — Assembly
 
-Produce the document in the chosen output format. Pass the following context to the format production workflow:
+**Gate: do not start this step until the user has signed off on the canvas** (see "Deliverable canvas" Step 5 — pending feedback or placeholders block assembly).
 
-- **Brand charter**: `client-data/clients/<name>/charter.json`
-- **Logo**: `client-data/clients/<name>/logos/` (path in charter `logo` section)
+Produce the document in the chosen output format. Pass the following context to `format-prepare-document`:
+
+- **Brand charter**: `companies/{client_slug}/charter.json`
+- **Logo**: `companies/{client_slug}/logos/` (path in charter `logo` section)
 - **Drafted sections**: the content from Step 2
 - **Tone and archetype**: from intake Phase 2/3
+- **Brand expression**: include `expression` (if resolved from charter) and `deliverable_genre: "proposal"` in the envelope so the downstream renderer applies the same compact direction
 
-The appropriate format skill handles document production:
-- DOCX output → the `docx` skill handles Word document creation
-- PPTX output → the `pptx` skill handles branded presentations
-- PDF output → generate via DOCX conversion or a PDF creation workflow
-- HTML output → the `frontend-design` skill handles web-native proposals
+`format-prepare-document` then routes to the terminal renderer:
+- DOCX output → `format-docx`
+- PPTX output → usually `format-pptx-hd`
+- PDF output → usually `format-pdf-hd`
 
 ### Step 4 — Executive Summary
 
-Write the executive summary last, synthesizing:
+Write the executive summary last — in the canvas, as the final section before the sign-off gate — synthesizing:
 - **The opportunity** — 1-2 sentences on the client's situation and need
 - **The solution** — what you're proposing, at the highest level
 - **Key differentiators** — why this firm, why this team, why this approach (2-3 bullets)
@@ -277,9 +323,11 @@ Run the quality checklist. See [quality-gates.md](references/quality-gates.md) f
 ### Step 7 — Packaging
 
 Produce final deliverables:
-1. **Final document** — in the requested format (DOCX, PPTX, PDF)
-2. **PDF export** (if requested) — convert via LibreOffice or a PDF creation workflow
+1. **Final document** — in the requested format via `format-prepare-document`
+2. **PDF export** (if requested) — via the renderer selected on that handoff path
 3. **Email summary** (if requested) — 10-bullet summary suitable for forwarding to the client as a cover email
+
+After handoff, *mention* (never auto-activate) that the user can capture feedback on the proposal with `asset-feedback`, and file your own `source: agent` retrospective there if the run hit an instruction gap or tool-call failure worth fixing.
 
 ## Quality Gates — Quick Reference
 
@@ -371,5 +419,6 @@ This skill owns proposal content strategy. Document production is handled by the
 | XLSX | `xlsx` | Spreadsheet creation for pricing models |
 
 Brand context to carry forward:
-- Brand charter location: `client-data/clients/<name>/charter.json`
-- Apply heading color from `colors.primary`, body font from `fonts.body`, logo from `brand/logos/` (path in charter `logo` section)
+- Brand charter location: `companies/{client_slug}/charter.json`
+- Apply heading color from `colors.primary`, body font from `fonts.body`, logo from `logos/` (path in charter `logo` section)
+- Include resolved `expression` (if present) and `deliverable_genre: "proposal"` for downstream render direction

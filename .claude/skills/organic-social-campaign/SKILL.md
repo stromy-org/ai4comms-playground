@@ -7,7 +7,7 @@ description: "Build organic B2B social media campaigns — editorial strategy, c
 
 ## Inputs from client-data
 
-- `companies/{client_slug}/charter.json` — brand identity (colors, fonts, logo, image catalog)
+- `companies/{client_slug}/charter.json` — brand identity (colors, fonts, logo, image catalog); read `expression` (optional) for compact brand direction (`principles`, `signatureElements`, `antiPatterns`) and `identity.positioning`
 - `companies/{client_slug}/profile.json` — company positioning, services, audiences
 - `companies/{client_slug}/people.json` (optional) — SMEs, authors, spokespersons
 - `companies/{client_slug}/messaging/pillars.json` (optional) — reusable messaging pillars
@@ -46,6 +46,39 @@ direct-read path is the development fallback. The `{base}` rule is correct in
 both contexts. Missing **required** input (charter/profile) → surface the full
 resolved path and ask. Missing **optional** input → degrade per the Content
 Assembly fallbacks below.
+
+## Deliverable canvas (prerequisite for prose deliverables)
+
+<!-- canvas-protocol:start v1 -->
+This skill produces a multi-section deliverable. Collaborate through a single
+chat artifact — the deliverable canvas. The canvas is the source of truth for
+the in-progress draft; chat scroll-back is not.
+
+1. **Resolve the section plan from this skill's own workflow.** Use the
+   approved structure this skill already defines (or the prompt/resource it
+   names). The canvas protocol does not invent sections.
+2. **Choose the substrate.** Use `markdown` by default for strategic wording,
+   plans, and other content where layout does not change meaning. Use `html`
+   only when visual arrangement materially affects the user's decision. HTML is
+   a **one-way display** surface only: never call back into an MCP from the
+   artifact.
+3. **Open the canvas.** Mint an 8-character hex `canvas_id`, then emit exactly
+   one artifact with identifier `canvas-<canvas_id>-<deliverable_type>`. One
+   chat = one canvas.
+4. **Iterate in the canvas.** After every change, re-emit the **full** canvas
+   as a new version of the same artifact. Never emit deltas. Never mint a
+   second canvas mid-session.
+5. **Self-check before handoff.** Every planned section exists, is substantive,
+   and appears in the agreed order. No `TBD`, placeholders, or pending
+   structural questions remain.
+6. **Sign-off gate.** Ask the user to confirm the canvas is final before any
+   render handoff or client-data write.
+7. **Construct the envelope.** Hand off `{deliverable_type, title, client_id,
+   sections:[{id, title, body}], meta:{canvas_id, substrate,
+   methodology_version}}`, where `methodology_version` is `1`. The downstream
+   formatter or terminal write step consumes the envelope — never raw chat
+   history.
+<!-- canvas-protocol:end -->
 
 ## Overview
 
@@ -123,6 +156,14 @@ If `voice://*` is unreachable (headless), fall back to L2-only + the inline
 anti-slop checklist and `log` the degradation — never fail the copy step. This
 skill *mentions* the cascade as context; it never invokes another skill. Full
 loop, precedence, and checklist: [voice-integration.md](references/voice-integration.md).
+
+**Brand expression layer (additive to voice cascade).** Before any copy step, read `expression` from `{base}/charter.json`. If present, apply as prose guidance alongside the cascade:
+- `expression.principles` — inform the register of pillar copy, hook language, and CTAs (e.g., "measured authority" → factual hooks, evidence-first; "evidence before decoration" → data-led captions)
+- `expression.signatureElements` — reflect where natural in copy style and series naming
+- `expression.antiPatterns` — add to the ban-list alongside voice cascade bans
+- `identity.positioning` — anchor the editorial strategy framing and the core message of content pillars
+- If `expression` is absent, fall back to the voice profile only with a soft note; no hard failure (output-tier brands may legitimately omit expression)
+- **Voice-cascade rule:** `expression` is additive to L1 + L2 bans, never a relaxation. Expression principles may sharpen tone but must not reintroduce a banned construction. Where a Brand Context API narrative is attached (`candidate.context`), treat it as input evidence for expression principles, not a voice source that overrides the cascade.
 
 ## Workflow
 
@@ -353,7 +394,7 @@ Compile the complete governance document:
 
 ### Final Output Assembly
 
-After Phase 6, compile all deliverables and present a summary to the user.
+After Phase 6, compile all deliverables and present a summary to the user. Then *mention* (never auto-activate) that the user can capture feedback with `asset-feedback`, and file your own `source: agent` retrospective there if the run hit an instruction gap or tool-call failure worth fixing.
 
 **Offer to save reusable config** to `{base}/social_media/`:
 - `config.json` — platform + UTM + compliance settings (if new or changed)
@@ -429,7 +470,10 @@ config + media taxonomy: [platform-content-config.md](references/platform-conten
      `short`) vs non-media-gen (`infographic`/`document` → `chart`/`diagram`/
      `pdf`/`pptx`).
    - **Anchor-select loop** (media-gen) — build the `brand_context` dict
-     (mirror `build_brand_context_from_charter`; call `validate_brand_context`),
+     (mirror `build_brand_context_from_charter`; call `validate_brand_context`);
+     extend the dict with `expression` (resolved from `{base}/charter.json`,
+     if present) and `deliverable_genre: "organic-social"` so the renderer
+     applies the same compact direction as the authoring side. Then
      `generate_image` for 3–4 candidates → **human picks ONE anchor** → set
      `anchor_asset_ref` on siblings.
    - **Generate siblings & video** (media-gen) — with Track A, pass the anchor as
@@ -479,21 +523,24 @@ Load these as needed — do not read all at once.
 
 ## Output Format Production
 
-This skill owns organic social campaign architecture — editorial strategy, content systems, community management, and measurement. Document production is handled by the appropriate format skill:
+**Gate: prose deliverables require the deliverable canvas sign-off gate to have passed** (see "Deliverable canvas" above; tabular XLSX outputs are exempt).
 
-| Output | Skill | Recommended For |
-|--------|-------|-----------------|
-| DOCX | `docx` | Strategy documents, playbooks, governance docs |
-| PPTX | `pptx` | Strategy presentations, stakeholder decks |
-| PDF | `pdf` | Distribution-ready strategy documents |
-| XLSX | `xlsx` | Editorial calendars, content matrices, KPI dashboards |
+This skill owns organic social campaign architecture — editorial strategy, content systems, community management, and measurement. Prose deliverables on the render path should go through `format-prepare-document`; tabular outputs stay on their direct format skill.
 
-**Default**: Produce markdown first. If the user wants formatted output, recommend XLSX for the editorial calendar and content matrix (tabular data), DOCX for the strategy and playbook documents.
+| Output | Routed renderer / skill | Recommended For |
+|--------|-------------------------|-----------------|
+| DOCX | `format-docx` | Strategy documents, playbooks, governance docs |
+| PPTX | `format-pptx-hd` | Strategy presentations, stakeholder decks |
+| PDF | `format-pdf-hd` | Distribution-ready strategy documents |
+| XLSX | `format-xlsx` | Editorial calendars, content matrices, KPI dashboards |
+
+**Default**: Produce markdown first. If the user wants formatted output, route prose documents through `format-prepare-document`; keep XLSX direct for calendars and matrices.
 
 **Brand context to carry forward** when producing formatted output:
 - Brand charter location: `{base}/charter.json`
 - Apply heading color from `colors.primary`, body font from `fonts.body`
 - Logo from `{base}/logos/` (path in charter `logo` section)
+- Include resolved `expression` (if present) and `deliverable_genre: "organic-social"` in the envelope for downstream render direction
 
 ### Diagram Integration
 
